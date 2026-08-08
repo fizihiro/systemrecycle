@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ─── Master Tables ───────────────────────────────────────────
+
+model Farmer {
+  id      Int    @id @default(autoincrement())
+  name    String
+  phone   String
+  address String @db.Text
+
+  fertilizerDistributions FertilizerDistribution[]
+  sackReturns             SackReturn[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("farmer")
+}
+
+model Supplier {
+  id          Int    @id @default(autoincrement())
+  companyName String @map("company_name")
+  location    String
+  phone       String
+
+  fertilizerDistributions FertilizerDistribution[]
+  sackReturns             SackReturn[]
+  recyclerDeliveries      RecyclerDelivery[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("supplier")
+}
+
+model Recycler {
+  id                Int     @id @default(autoincrement())
+  companyName       String  @map("company_name")
+  processCapacityKg Decimal @map("process_capacity_kg") @db.Decimal(12, 2)
+  phone             String
+
+  recyclerDeliveries RecyclerDelivery[]
+  manufacturerSales  ManufacturerSales[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("recycler")
+}
+
+model Manufacturer {
+  id          Int    @id @default(autoincrement())
+  companyName String @map("company_name")
+  phone       String
+
+  manufacturerSales ManufacturerSales[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("manufacturer")
+}
+
+model SackCatalog {
+  id              Int     @id @default(autoincrement())
+  fertilizerType  String  @map("fertilizer_type")
+  discountValueRm Decimal @map("discount_value_rm") @db.Decimal(10, 2)
+
+  fertilizerDistributions FertilizerDistribution[]
+  sackReturns             SackReturn[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sack_catalog")
+}
+
+// ─── Transaction Tables ──────────────────────────────────────
+
+model FertilizerDistribution {
+  id         Int      @id @default(autoincrement())
+  date       DateTime @db.Date
+  supplierId Int      @map("supplier_id")
+  farmerId   Int      @map("farmer_id")
+  sackId     Int      @map("sack_id")
+  quantity   Int
+
+  supplier Supplier    @relation(fields: [supplierId], references: [id])
+  farmer   Farmer      @relation(fields: [farmerId], references: [id])
+  sack     SackCatalog @relation(fields: [sackId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([supplierId])
+  @@index([farmerId])
+  @@map("fertilizer_distribution")
+}
+
+model SackReturn {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @db.Date
+  farmerId        Int      @map("farmer_id")
+  supplierId      Int      @map("supplier_id")
+  sackId          Int      @map("sack_id")
+  passQty         Int      @map("pass_qty")
+  rejectQty       Int      @default(0) @map("reject_qty")
+  rejectReason    String?  @map("reject_reason") @db.Text
+  totalDiscountRm Decimal  @map("total_discount_rm") @db.Decimal(10, 2)
+
+  farmer   Farmer      @relation(fields: [farmerId], references: [id])
+  supplier Supplier    @relation(fields: [supplierId], references: [id])
+  sack     SackCatalog @relation(fields: [sackId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([farmerId])
+  @@index([supplierId])
+  @@map("sack_return")
+}
+
+model RecyclerDelivery {
+  id             Int      @id @default(autoincrement())
+  date           DateTime @db.Date
+  supplierId     Int      @map("supplier_id")
+  recyclerId     Int      @map("recycler_id")
+  sackQty        Int      @map("sack_qty")
+  inputWeightKg  Decimal  @map("input_weight_kg") @db.Decimal(12, 2)
+  outputWeightKg Decimal  @map("output_weight_kg") @db.Decimal(12, 2)
+
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  recycler Recycler @relation(fields: [recyclerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([supplierId])
+  @@index([recyclerId])
+  @@map("recycler_delivery")
+}
+
+model ManufacturerSales {
+  id               Int      @id @default(autoincrement())
+  date             DateTime @db.Date
+  recyclerId       Int      @map("recycler_id")
+  manufacturerId   Int      @map("manufacturer_id")
+  purchaseWeightKg Decimal  @map("purchase_weight_kg") @db.Decimal(12, 2)
+  salesPriceRm     Decimal  @map("sales_price_rm") @db.Decimal(12, 2)
+
+  recycler     Recycler     @relation(fields: [recyclerId], references: [id])
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([recyclerId])
+  @@index([manufacturerId])
+  @@map("manufacturer_sales")
+}
+
+// ─── Auth Tables (better-auth) ───────────────────────────────
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @map("email_verified")
+  image         String?
+  role          String    @default("admin")
+  createdAt     DateTime  @map("created_at")
+  updatedAt     DateTime  @map("updated_at")
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @map("expires_at")
+  token     String
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token") @db.Text
+  refreshToken          String?   @map("refresh_token") @db.Text
+  idToken               String?   @map("id_token") @db.Text
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?   @db.Text
+  createdAt             DateTime  @map("created_at")
+  updatedAt             DateTime  @map("updated_at")
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String    @db.Text
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime? @map("created_at")
+  updatedAt  DateTime? @map("updated_at")
+
+  @@map("verification")
+}

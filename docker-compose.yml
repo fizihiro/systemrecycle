@@ -1,0 +1,14 @@
+# version: '3.8'
+services:
+  mysql-db:
+    image: mysql:latest
+    container_name: recycle_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: recycle_system
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+volumes:
+  db_data:
