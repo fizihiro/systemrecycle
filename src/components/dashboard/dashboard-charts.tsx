@@ -44,8 +44,9 @@ const discountConfig = {
   discountRm: { label: "Discount (RM)", color: "var(--chart-5)" },
 } satisfies ChartConfig;
 
-const discountByTypeConfig = {
-  discountRm: { label: "Total Discount", color: "var(--chart-5)" },
+const discountComparisonConfig = {
+  actualDiscountRm: { label: "Actual Discount", color: "var(--chart-5)" },
+  potentialDiscountRm: { label: "Max Potential", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
 const weightConfig = {
@@ -136,7 +137,7 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
       item.returnedReject > 0 ||
       item.toRecycler > 0,
   );
-  const hasDiscountData = data.discountBySackType.length > 0;
+  const hasDiscountData = data.discountComparison.length > 0;
   const hasWeightData = data.weightTotals.some((item) => item.value > 0);
   const hasReturnQuality = data.returnQuality.some((item) => item.value > 0);
   const hasSupplierFlow = data.supplierFlow.length > 0;
@@ -330,17 +331,17 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Discount by Material & Size"
-          description="Total discount value grouped by product category, sack size, and material type."
+          title="Discount Analysis: Actual vs Potential"
+          description="Actual discount earned compared to maximum if 100% of distributed sacks were returned per material & size."
           accent="bg-gradient-to-r from-gold/12 via-card to-sage/20"
         >
           {hasDiscountData ? (
             <ChartContainer
-              config={discountByTypeConfig}
-              className="aspect-[16/8] w-full"
+              config={discountComparisonConfig}
+              className="aspect-[16/9] w-full"
             >
               <BarChart
-                data={data.discountBySackType}
+                data={data.discountComparison}
                 layout="vertical"
                 margin={{ left: 8, right: 16 }}
               >
@@ -351,22 +352,63 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
                   dataKey="sackType"
                   tickLine={false}
                   axisLine={false}
-                  width={160}
+                  width={168}
                 />
                 <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, _name, item) => [
-                        formatCurrency(Number(value)),
-                        `${item?.payload?.passQty ?? 0} pass qty`,
-                      ]}
-                    />
-                  }
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) {
+                      return null;
+                    }
+
+                    const row = payload[0]?.payload as DashboardAnalytics["discountComparison"][number];
+                    const actual = row?.actualDiscountRm ?? 0;
+                    const potential = row?.potentialDiscountRm ?? 0;
+
+                    return (
+                      <div className="grid min-w-52 gap-2 rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
+                        <p className="font-medium leading-snug">{label}</p>
+                        <div className="grid gap-1.5 border-t pt-2">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">Actual earned</span>
+                            <span className="font-mono font-medium tabular-nums">
+                              {formatCurrency(actual)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">Max potential</span>
+                            <span className="font-mono font-medium tabular-nums">
+                              {formatCurrency(potential)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">Capture rate</span>
+                            <span className="font-mono font-medium tabular-nums">
+                              {row?.captureRate ?? 0}%
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">Distributed</span>
+                            <span className="font-mono font-medium tabular-nums">
+                              {(row?.distributedQty ?? 0).toLocaleString("en-MY")} pcs
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar
+                  dataKey="actualDiscountRm"
+                  fill="var(--color-actualDiscountRm)"
+                  radius={[0, 6, 6, 0]}
+                  barSize={14}
                 />
                 <Bar
-                  dataKey="discountRm"
-                  fill="var(--color-discountRm)"
-                  radius={[0, 10, 10, 0]}
+                  dataKey="potentialDiscountRm"
+                  fill="var(--color-potentialDiscountRm)"
+                  radius={[0, 6, 6, 0]}
+                  barSize={14}
                 />
               </BarChart>
             </ChartContainer>
@@ -427,22 +469,22 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
         <CardContent className="pt-5">
           <div className="grid gap-4 md:grid-cols-3">
             <SummaryMetric
-              label="Return Rate"
-              value={`${data.kpis.returnRate}%`}
-              detail={`${data.kpis.sacksReturnedPass.toLocaleString()} pass sacks from ${data.kpis.sacksDistributed.toLocaleString()} distributed.`}
-              accent="border-l-4 border-l-flow-2 bg-gradient-to-br from-sage/25 to-card"
+              label="Return Gap"
+              value={`${data.leakages.returnGapPct}%`}
+              detail={`${data.leakages.returnGapPieces.toLocaleString()} of ${data.kpis.sacksDistributed.toLocaleString()} distributed sacks never returned.`}
+              accent="border-l-4 border-l-destructive bg-gradient-to-br from-destructive/8 to-card"
             />
             <SummaryMetric
-              label="Recovery Rate"
-              value={`${data.kpis.recoveryRate}%`}
-              detail={`${data.kpis.totalOutputWeightFormatted} output from ${data.kpis.totalInputWeightFormatted} recycler input.`}
-              accent="border-l-4 border-l-primary bg-gradient-to-br from-primary/8 to-card"
-            />
-            <SummaryMetric
-              label="Incentive Spend"
-              value={data.kpis.totalDiscountRmFormatted}
-              detail="Total farmer discount value across all sack returns."
+              label="Discount Capture"
+              value={`${data.kpis.discountCaptureRate}%`}
+              detail={`${data.kpis.totalDiscountRmFormatted} earned of ${data.kpis.totalPotentialDiscountRmFormatted} max potential at 100% return.`}
               accent="border-l-4 border-l-gold bg-gradient-to-br from-gold/12 to-card"
+            />
+            <SummaryMetric
+              label="Recycling Yield Loss"
+              value={`${data.leakages.recyclingYieldLossPct}%`}
+              detail={`${data.leakages.yieldLossKg.toLocaleString("en-MY")} kg lost between recycler output and manufacturer purchase.`}
+              accent="border-l-4 border-l-primary bg-gradient-to-br from-primary/8 to-card"
             />
           </div>
         </CardContent>

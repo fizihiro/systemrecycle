@@ -1,7 +1,8 @@
 import { BarChart3 } from "lucide-react";
 
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
-import { DashboardFlowPipeline } from "@/components/dashboard/dashboard-flow-pipeline";
+import { DashboardCircularFlow } from "@/components/dashboard/dashboard-circular-flow";
+import { DashboardFarmerPerformance } from "@/components/dashboard/dashboard-farmer-performance";
 import { DashboardKpiGrid } from "@/components/dashboard/dashboard-kpi-grid";
 import { getDashboardAnalytics } from "@/lib/actions/dashboard";
 
@@ -12,50 +13,75 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8 pb-6">
-      <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-sidebar via-sidebar/95 to-teal/30 p-6 text-sidebar-foreground shadow-lg sm:p-8">
-        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <section className="rounded-2xl border border-border/60 bg-sidebar p-6 text-sidebar-foreground shadow-lg sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <div className="bg-gold/20 text-gold inline-flex items-center gap-2 rounded-full border border-gold/30 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
               <BarChart3 className="size-3.5" />
-              Circular Economy Overview
+              Circularity &amp; Financial Incentives
             </div>
             <h1 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
               Sack2Loop Dashboard
             </h1>
-            <p className="text-sidebar-foreground/80 max-w-xl text-sm leading-relaxed sm:text-base">
-              Real-time analytics for fertiliser and animal feed sack flow,
-              processing weights, and farmer discount performance.
+            <p className="text-sidebar-foreground/85 max-w-xl text-sm leading-relaxed sm:text-base">
+              Track material leakages across the closed-loop chain, compare actual
+              vs potential farmer discounts, and monitor weight-normalised flow
+              from distribution through recycling.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+          <div className="grid w-full max-w-xl shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
             {[
-              { label: "Distributed", value: analytics.kpis.sacksDistributed },
-              { label: "Returned", value: analytics.kpis.sacksReturnedPass },
-              { label: "To Recycler", value: analytics.kpis.sacksToRecycler },
-              { label: "Return Rate", value: `${analytics.kpis.returnRate}%` },
+              {
+                label: "Stage 1 · Distributed",
+                value: `${analytics.kpis.sacksDistributed.toLocaleString()} pcs`,
+                sub: analytics.kpis.distributedWeightFormatted,
+              },
+              {
+                label: "Stage 2 · Returned",
+                value: `${analytics.kpis.sacksReturnedTotal.toLocaleString()} pcs`,
+                sub: analytics.kpis.returnedWeightFormatted,
+              },
+              {
+                label: "Return Gap",
+                value: `${analytics.leakages.returnGapPct}%`,
+                sub: "never returned",
+              },
+              {
+                label: "Reject Rate",
+                value: `${analytics.leakages.rejectRatePct}%`,
+                sub: "failed QC",
+              },
+              {
+                label: "Yield Loss",
+                value: `${analytics.leakages.recyclingYieldLossPct}%`,
+                sub: "recycler → mfg",
+              },
+              {
+                label: "Discount Capture",
+                value: `${analytics.kpis.discountCaptureRate}%`,
+                sub: "actual vs potential",
+              },
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm"
+                className="rounded-xl border border-sidebar-foreground/15 bg-sidebar-foreground/10 px-3 py-2.5"
               >
-                <p className="text-sidebar-foreground/70 text-[10px] font-medium uppercase tracking-wider">
+                <p className="text-sidebar-foreground/75 text-[10px] font-medium uppercase tracking-wider">
                   {item.label}
                 </p>
-                <p className="font-heading mt-1 text-lg font-bold">
-                  {typeof item.value === "number"
-                    ? item.value.toLocaleString()
-                    : item.value}
+                <p className="font-heading mt-1 text-lg font-bold text-sidebar-foreground">
+                  {item.value}
                 </p>
+                <p className="text-sidebar-foreground/65 text-[10px]">{item.sub}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-teal/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 size-48 rounded-full bg-gold/10 blur-3xl" />
       </section>
 
+      <DashboardCircularFlow data={analytics} />
+      <DashboardFarmerPerformance data={analytics} />
       <DashboardKpiGrid data={analytics} />
-      <DashboardFlowPipeline data={analytics} />
       <DashboardCharts data={analytics} />
     </div>
   );
