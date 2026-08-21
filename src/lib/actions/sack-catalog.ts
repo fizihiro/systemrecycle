@@ -16,20 +16,30 @@ import {
   resolvePage,
   type PaginatedResult,
 } from "@/lib/pagination";
+import { formatSackLabel } from "@/lib/sack-catalog";
 import { sackCatalogSchema } from "@/lib/validations";
 
 const PATH = "/dashboard/sack-catalog";
 
 function serialize(item: {
   id: number;
-  fertilizerType: string;
+  productCategory: string;
+  materialType: string;
+  sizeKg: number;
   discountValueRm: { toString(): string };
   createdAt: Date;
   updatedAt: Date;
 }) {
+  const fields = {
+    productCategory: item.productCategory,
+    materialType: item.materialType,
+    sizeKg: item.sizeKg,
+  };
+
   return {
     id: item.id,
-    fertilizerType: item.fertilizerType,
+    ...fields,
+    label: formatSackLabel(fields),
     discountValueRm: Number(item.discountValueRm),
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
@@ -44,7 +54,7 @@ export async function getSackCatalogItems(
   const total = await prisma.sackCatalog.count();
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.sackCatalog.findMany({
-    orderBy: { id: "desc" },
+    orderBy: [{ productCategory: "asc" }, { sizeKg: "asc" }, { id: "desc" }],
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
   });
@@ -54,20 +64,31 @@ export async function getSackCatalogItems(
 
 export async function getSackCatalogOptions() {
   const items = await prisma.sackCatalog.findMany({
-    orderBy: { fertilizerType: "asc" },
-    select: { id: true, fertilizerType: true, discountValueRm: true },
+    orderBy: [{ productCategory: "asc" }, { sizeKg: "asc" }],
+    select: {
+      id: true,
+      productCategory: true,
+      materialType: true,
+      sizeKg: true,
+      discountValueRm: true,
+    },
   });
 
   return items.map((item) => ({
     id: item.id,
-    fertilizerType: item.fertilizerType,
+    productCategory: item.productCategory,
+    materialType: item.materialType,
+    sizeKg: item.sizeKg,
+    label: formatSackLabel(item),
     discountValueRm: Number(item.discountValueRm),
   }));
 }
 
 function parseInput(formData: FormData) {
   return sackCatalogSchema.safeParse({
-    fertilizerType: formData.get("fertilizerType"),
+    productCategory: formData.get("productCategory"),
+    materialType: formData.get("materialType"),
+    sizeKg: formData.get("sizeKg"),
     discountValueRm: formData.get("discountValueRm"),
   });
 }

@@ -48,7 +48,9 @@ CREATE TABLE `manufacturer` (
 -- CreateTable
 CREATE TABLE `sack_catalog` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `fertilizer_type` VARCHAR(191) NOT NULL,
+    `product_category` VARCHAR(191) NOT NULL,
+    `material_type` VARCHAR(191) NOT NULL,
+    `size_kg` INTEGER NOT NULL,
     `discount_value_rm` DECIMAL(10, 2) NOT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,

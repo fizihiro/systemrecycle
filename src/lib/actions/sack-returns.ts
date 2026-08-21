@@ -17,6 +17,7 @@ import {
   type PaginatedResult,
 } from "@/lib/pagination";
 import { computeDiscount } from "@/lib/discount";
+import { formatSackLabel } from "@/lib/sack-catalog";
 import { sackReturnSchema } from "@/lib/validations";
 
 const PATH = "/dashboard/sack-returns";
@@ -33,7 +34,11 @@ function serialize(item: {
   totalDiscountRm: { toString(): string };
   farmer: { name: string };
   supplier: { companyName: string };
-  sack: { fertilizerType: string };
+  sack: {
+    productCategory: string;
+    materialType: string;
+    sizeKg: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -49,7 +54,7 @@ function serialize(item: {
     totalDiscountRm: Number(item.totalDiscountRm),
     farmerName: item.farmer.name,
     supplierName: item.supplier.companyName,
-    sackType: item.sack.fertilizerType,
+    sackLabel: formatSackLabel(item.sack),
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   };
@@ -69,7 +74,13 @@ export async function getSackReturns(
     include: {
       farmer: { select: { name: true } },
       supplier: { select: { companyName: true } },
-      sack: { select: { fertilizerType: true } },
+      sack: {
+        select: {
+          productCategory: true,
+          materialType: true,
+          sizeKg: true,
+        },
+      },
     },
   });
 

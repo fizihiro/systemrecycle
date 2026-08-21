@@ -118,9 +118,9 @@ export function AppSidebar() {
             <Recycle className="size-5" strokeWidth={2.25} />
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-bold tracking-tight">Recycle System</span>
+            <span className="text-sm font-bold tracking-tight">Sack2Loop</span>
             <span className="text-sidebar-foreground/65 text-xs leading-snug">
-              Plastic Sack Circular Economy
+              Fertiliser &amp; Feed Sack Circular Economy
             </span>
           </div>
         </Link>
@@ -132,7 +132,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-sidebar-border border-t p-4">
         <p className="text-sidebar-foreground/50 text-xs">
-          UiTM Circular Economy Prototype
+          Sack2Loop · UiTM Prototype
         </p>
       </SidebarFooter>
     </Sidebar>

@@ -182,7 +182,7 @@ export function SackReturnsManager({
                 <TableHead>Date</TableHead>
                 <TableHead>Farmer</TableHead>
                 <TableHead>Supplier</TableHead>
-                <TableHead>Sack Type</TableHead>
+                <TableHead>Sack</TableHead>
                 <TableHead>Pass</TableHead>
                 <TableHead>Reject</TableHead>
                 <TableHead>Total Discount</TableHead>
@@ -195,7 +195,7 @@ export function SackReturnsManager({
                   <TableCell>{formatDate(item.date)}</TableCell>
                   <TableCell>{item.farmerName}</TableCell>
                   <TableCell>{item.supplierName}</TableCell>
-                  <TableCell>{item.sackType}</TableCell>
+                  <TableCell className="max-w-xs">{item.sackLabel}</TableCell>
                   <TableCell>{item.passQty}</TableCell>
                   <TableCell>{item.rejectQty}</TableCell>
                   <TableCell>{formatCurrency(item.totalDiscountRm)}</TableCell>
@@ -255,13 +255,13 @@ export function SackReturnsManager({
             <FormSelect
               id="sackId"
               name="sackId"
-              label="Sack Type"
+              label="Sack Catalog Item"
               value={sackId}
               onValueChange={(value) => {
                 setSackId(value);
                 setDiscountTouched(false);
               }}
-              placeholder="Select sack type"
+              placeholder="Select catalog item"
               options={sackOptions}
             />
             <div className="grid gap-4 sm:grid-cols-2">

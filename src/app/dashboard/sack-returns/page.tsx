@@ -31,7 +31,7 @@ export default async function SackReturnsPage({ searchParams }: PageProps) {
       }))}
       sacks={sacks.map((item) => ({
         id: item.id,
-        label: item.fertilizerType,
+        label: item.label,
         discountValueRm: item.discountValueRm,
       }))}
     />

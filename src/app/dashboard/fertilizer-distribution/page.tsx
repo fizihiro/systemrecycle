@@ -33,7 +33,8 @@ export default async function FertilizerDistributionPage({
       }))}
       sacks={sacks.map((item) => ({
         id: item.id,
-        label: item.fertilizerType,
+        label: item.label,
+        discountValueRm: item.discountValueRm,
       }))}
     />
   );

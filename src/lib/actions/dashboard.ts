@@ -90,12 +90,18 @@ export async function getDashboardAnalytics() {
       ORDER BY monthKey
     `,
     prisma.$queryRaw<DiscountByTypeRow[]>`
-      SELECT sc.fertilizer_type AS sackType,
+      SELECT CONCAT(
+               sc.product_category,
+               ' ',
+               CAST(sc.size_kg AS CHAR),
+               'kg · ',
+               sc.material_type
+             ) AS sackType,
              CAST(SUM(sr.total_discount_rm) AS DECIMAL(20,2)) AS discountRm,
              CAST(SUM(sr.pass_qty) AS DECIMAL(20,0)) AS passQty
       FROM sack_return sr
       JOIN sack_catalog sc ON sc.id = sr.sack_id
-      GROUP BY sc.fertilizer_type
+      GROUP BY sc.product_category, sc.size_kg, sc.material_type
       ORDER BY discountRm DESC
     `,
     prisma.$queryRaw<SupplierFlowRow[]>`

@@ -52,9 +52,9 @@ export default function LoginPage() {
             <Recycle className="h-5 w-5" />
           </div>
           <div>
-            <CardTitle>Admin Sign In</CardTitle>
+            <CardTitle>Sack2Loop Admin Sign In</CardTitle>
             <CardDescription>
-              Plastic sack recycling circular economy system
+              Fertiliser and animal feed sack circular economy platform
             </CardDescription>
           </div>
         </CardHeader>

@@ -69,7 +69,9 @@ model Manufacturer {
 
 model SackCatalog {
   id              Int     @id @default(autoincrement())
-  fertilizerType  String  @map("fertilizer_type")
+  productCategory String  @map("product_category")
+  materialType    String  @map("material_type")
+  sizeKg          Int     @map("size_kg")
   discountValueRm Decimal @map("discount_value_rm") @db.Decimal(10, 2)
 
   fertilizerDistributions FertilizerDistribution[]

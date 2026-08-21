@@ -17,6 +17,7 @@ import {
   type PaginatedResult,
 } from "@/lib/pagination";
 import { fertilizerDistributionSchema } from "@/lib/validations";
+import { formatSackLabel } from "@/lib/sack-catalog";
 
 const PATH = "/dashboard/fertilizer-distribution";
 
@@ -29,7 +30,11 @@ function serialize(item: {
   quantity: number;
   supplier: { companyName: string };
   farmer: { name: string };
-  sack: { fertilizerType: string };
+  sack: {
+    productCategory: string;
+    materialType: string;
+    sizeKg: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -42,7 +47,7 @@ function serialize(item: {
     quantity: item.quantity,
     supplierName: item.supplier.companyName,
     farmerName: item.farmer.name,
-    sackType: item.sack.fertilizerType,
+    sackLabel: formatSackLabel(item.sack),
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   };
@@ -62,7 +67,13 @@ export async function getFertilizerDistributions(
     include: {
       supplier: { select: { companyName: true } },
       farmer: { select: { name: true } },
-      sack: { select: { fertilizerType: true } },
+      sack: {
+        select: {
+          productCategory: true,
+          materialType: true,
+          sizeKg: true,
+        },
+      },
     },
   });
 

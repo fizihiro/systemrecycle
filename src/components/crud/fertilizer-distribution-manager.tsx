@@ -162,7 +162,7 @@ export function FertilizerDistributionManager({
                 <TableHead>Date</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Farmer</TableHead>
-                <TableHead>Sack Type</TableHead>
+                <TableHead>Sack</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -173,7 +173,7 @@ export function FertilizerDistributionManager({
                   <TableCell>{formatDate(item.date)}</TableCell>
                   <TableCell>{item.supplierName}</TableCell>
                   <TableCell>{item.farmerName}</TableCell>
-                  <TableCell>{item.sackType}</TableCell>
+                  <TableCell className="max-w-xs">{item.sackLabel}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -233,10 +233,10 @@ export function FertilizerDistributionManager({
             <FormSelect
               id="sackId"
               name="sackId"
-              label="Sack Type"
+              label="Sack Catalog Item"
               value={sackId}
               onValueChange={setSackId}
-              placeholder="Select sack type"
+              placeholder="Select catalog item"
               options={sackOptions}
             />
             <div className="space-y-2">

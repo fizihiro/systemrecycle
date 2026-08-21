@@ -26,14 +26,45 @@ const prisma = new PrismaClient({
   adapter: new PrismaMariaDb(getMariaDbConfig() as ConstructorParameters<typeof PrismaMariaDb>[0]),
 });
 
-const SACK_TYPES = [
-  { type: "Urea 50kg", discount: 2.5, weightKg: 0.18 },
-  { type: "NPK 25kg", discount: 1.8, weightKg: 0.12 },
-  { type: "Compound 10kg", discount: 1.2, weightKg: 0.08 },
-  { type: "Organic 20kg", discount: 2.0, weightKg: 0.14 },
-  { type: "Phosphate 40kg", discount: 2.2, weightKg: 0.16 },
-  { type: "Potash 25kg", discount: 1.9, weightKg: 0.13 },
+const MATERIAL_TYPES = [
+  "Plain / non-laminated woven PP",
+  "Laminated/coated woven PP",
+  "BOPP-laminated woven PP",
+  "Woven PP + inner PE liner",
+  "FIBC / jumbo PP bag",
 ] as const;
+
+function buildSackCatalogSeed() {
+  const entries: Array<{
+    productCategory: "Fertiliser" | "Animal Feed";
+    sizeKg: number;
+    materialType: (typeof MATERIAL_TYPES)[number];
+    discount: number;
+    weightKg: number;
+  }> = [];
+
+  for (const sizeKg of [20, 25, 50]) {
+    entries.push({
+      productCategory: "Animal Feed",
+      sizeKg,
+      materialType: pick([...MATERIAL_TYPES]),
+      discount: Math.round(sizeKg * 0.05 * 100) / 100,
+      weightKg: Math.round(sizeKg * 3.6) / 1000,
+    });
+  }
+
+  for (const sizeKg of [25, 40, 50]) {
+    entries.push({
+      productCategory: "Fertiliser",
+      sizeKg,
+      materialType: pick([...MATERIAL_TYPES]),
+      discount: Math.round(sizeKg * 0.05 * 100) / 100,
+      weightKg: Math.round(sizeKg * 3.6) / 1000,
+    });
+  }
+
+  return entries;
+}
 
 const SUPPLIERS = [
   { companyName: "AgroSupply Kedah Sdn Bhd", location: "Alor Setar, Kedah", phone: "04-7312200" },
@@ -165,11 +196,14 @@ async function clearBusinessData() {
 async function seedMasters() {
   console.log("Seeding master tables...");
 
+  const sackCatalogSeed = buildSackCatalogSeed();
   const sacks = await Promise.all(
-    SACK_TYPES.map((sack) =>
+    sackCatalogSeed.map((sack) =>
       prisma.sackCatalog.create({
         data: {
-          fertilizerType: sack.type,
+          productCategory: sack.productCategory,
+          materialType: sack.materialType,
+          sizeKg: sack.sizeKg,
           discountValueRm: sack.discount,
         },
       }),
@@ -270,10 +304,13 @@ async function seedReturns(
   console.log("Seeding sack returns (40k+ records)...");
 
   const sackDiscountMap = new Map(
-    masters.sacks.map((sack, index) => [sack.id, SACK_TYPES[index]!.discount]),
+    masters.sacks.map((sack) => [sack.id, Number(sack.discountValueRm)]),
   );
   const sackWeightMap = new Map(
-    masters.sacks.map((sack, index) => [sack.id, SACK_TYPES[index]!.weightKg]),
+    masters.sacks.map((sack) => [
+      sack.id,
+      Math.round(sack.sizeKg * 3.6) / 1000,
+    ]),
   );
 
   const totalDistributed = distributions.reduce((sum, row) => sum + row.quantity, 0);

@@ -330,8 +330,8 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Discount by Sack Type"
-          description="Total discount value grouped by fertilizer sack catalog."
+          title="Discount by Material & Size"
+          description="Total discount value grouped by product category, sack size, and material type."
           accent="bg-gradient-to-r from-gold/12 via-card to-sage/20"
         >
           {hasDiscountData ? (
@@ -351,7 +351,7 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
                   dataKey="sackType"
                   tickLine={false}
                   axisLine={false}
-                  width={112}
+                  width={160}
                 />
                 <ChartTooltip
                   content={

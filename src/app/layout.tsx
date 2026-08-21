@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Recycle System",
-  description: "Plastic sack recycling circular economy prototype",
+  title: "Sack2Loop",
+  description: "Sack2Loop circular economy platform for fertiliser and animal feed sack recycling",
 };
 
 export default function RootLayout({

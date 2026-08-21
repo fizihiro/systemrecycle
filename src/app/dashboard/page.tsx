@@ -5,6 +5,8 @@ import { DashboardFlowPipeline } from "@/components/dashboard/dashboard-flow-pip
 import { DashboardKpiGrid } from "@/components/dashboard/dashboard-kpi-grid";
 import { getDashboardAnalytics } from "@/lib/actions/dashboard";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const analytics = await getDashboardAnalytics();
 
@@ -18,11 +20,11 @@ export default async function DashboardPage() {
               Circular Economy Overview
             </div>
             <h1 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Plastic Sack Recycling Dashboard
+              Sack2Loop Dashboard
             </h1>
             <p className="text-sidebar-foreground/80 max-w-xl text-sm leading-relaxed sm:text-base">
-              Real-time analytics for sack flow, processing weights, and farmer
-              discount performance across the full recycling loop.
+              Real-time analytics for fertiliser and animal feed sack flow,
+              processing weights, and farmer discount performance.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">

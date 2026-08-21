@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+import {
+  MATERIAL_TYPES,
+  PRODUCT_CATEGORIES,
+  SIZE_KG_BY_CATEGORY,
+  type ProductCategory,
+} from "@/lib/sack-catalog";
+
 const positiveInt = z.coerce.number().int().positive();
 const nonNegativeInt = z.coerce.number().int().min(0);
 const positiveDecimal = z.coerce.number().positive();
@@ -11,10 +18,24 @@ const optionalString = z
   .transform((value) => (value.length === 0 ? undefined : value))
   .optional();
 
-export const sackCatalogSchema = z.object({
-  fertilizerType: requiredString,
-  discountValueRm: nonNegativeDecimal,
-});
+export const sackCatalogSchema = z
+  .object({
+    productCategory: z.enum(PRODUCT_CATEGORIES),
+    materialType: z.enum(MATERIAL_TYPES),
+    sizeKg: positiveInt,
+    discountValueRm: nonNegativeDecimal,
+  })
+  .superRefine((data, ctx) => {
+    const allowedSizes =
+      SIZE_KG_BY_CATEGORY[data.productCategory as ProductCategory];
+    if (!(allowedSizes as readonly number[]).includes(data.sizeKg)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Size must be one of ${allowedSizes.join(", ")}kg for ${data.productCategory}.`,
+        path: ["sizeKg"],
+      });
+    }
+  });
 
 export const farmerSchema = z.object({
   name: requiredString,
