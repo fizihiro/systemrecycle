@@ -1,8 +1,8 @@
 import { BarChart3 } from "lucide-react";
 
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
-import { DashboardCircularFlow } from "@/components/dashboard/dashboard-circular-flow";
 import { DashboardFarmerPerformance } from "@/components/dashboard/dashboard-farmer-performance";
+import { DashboardFlowPipeline } from "@/components/dashboard/dashboard-flow-pipeline";
 import { DashboardKpiGrid } from "@/components/dashboard/dashboard-kpi-grid";
 import { getDashboardAnalytics } from "@/lib/actions/dashboard";
 
@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const analytics = await getDashboardAnalytics();
 
   return (
-    <div className="flex flex-col gap-8 pb-6">
+    <div className="relative flex flex-col gap-8 pb-14">
       <section className="rounded-2xl border border-border/60 bg-sidebar p-6 text-sidebar-foreground shadow-lg sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
@@ -79,10 +79,17 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <DashboardCircularFlow data={analytics} />
+      <DashboardFlowPipeline data={analytics} />
       <DashboardFarmerPerformance data={analytics} />
       <DashboardKpiGrid data={analytics} />
       <DashboardCharts data={analytics} />
+
+      <p
+        className="text-muted-foreground/35 pointer-events-none absolute bottom-0 left-0 select-none text-sm font-medium tracking-[0.2em] uppercase"
+        aria-hidden
+      >
+        ByRecytra
+      </p>
     </div>
   );
 }
