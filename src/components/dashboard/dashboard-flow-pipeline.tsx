@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Factory,
   Package,
   Recycle,
   RotateCcw,
@@ -14,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { estimateSackWeightKg } from "@/lib/dashboard/constants";
 import type { DashboardAnalytics } from "@/lib/actions/dashboard";
 
 const pipelineSteps = [
@@ -39,8 +37,8 @@ const pipelineSteps = [
   {
     key: "returns",
     stage: 2,
-    label: "Returns",
-    sublabel: "Pass & reject intake",
+    label: "Collection",
+    sublabel: "Empty sacks returned by farmers",
     icon: RotateCcw,
     flowColor: "bg-flow-2",
     iconColor: "text-teal-foreground bg-teal/20",
@@ -49,45 +47,27 @@ const pipelineSteps = [
     lightText: false,
     dualUnits: true,
     getMetrics: (data: DashboardAnalytics["kpis"]) => ({
-      pcs: data.sacksReturnedTotal,
-      kg: data.returnedWeightKg,
-      detail: `${data.sacksReturnedPass.toLocaleString()} pass · ${data.sacksReturnedReject.toLocaleString()} reject`,
+      pcs: data.sacksCollected,
+      kg: data.collectedWeightKg,
+      detail: `${data.collectionRate}% collection rate`,
     }),
   },
   {
-    key: "recycler",
+    key: "collector",
     stage: 3,
-    label: "To Recycler",
-    sublabel: "Passed sacks forwarded",
+    label: "Collector Processing",
+    sublabel: "Recycling & reproduction",
     icon: Recycle,
     flowColor: "bg-flow-3",
     iconColor: "text-white bg-white/20",
     connectorFrom: "from-flow-3",
-    connectorTo: "to-flow-4",
+    connectorTo: "to-flow-3",
     lightText: true,
     dualUnits: true,
     getMetrics: (data: DashboardAnalytics["kpis"]) => ({
-      pcs: data.sacksToRecycler,
-      kg: estimateSackWeightKg(data.sacksToRecycler),
-      detail: data.totalInputWeightFormatted,
-    }),
-  },
-  {
-    key: "manufacturing",
-    stage: 4,
-    label: "Manufacturing",
-    sublabel: "Recycled material purchase",
-    icon: Factory,
-    flowColor: "bg-flow-4",
-    iconColor: "text-white bg-white/20",
-    connectorFrom: "from-flow-4",
-    connectorTo: "to-flow-4",
-    lightText: true,
-    dualUnits: false,
-    getMetrics: (data: DashboardAnalytics["kpis"]) => ({
-      pcs: null as number | null,
-      kg: data.totalPurchaseWeightKg,
-      detail: undefined as string | undefined,
+      pcs: data.sacksToCollector,
+      kg: data.totalInputWeightKg,
+      detail: `${data.totalOutputWeightFormatted} output · ${data.recoveryYieldPct}% yield`,
     }),
   },
 ] as const;
@@ -180,7 +160,7 @@ function MetricDisplay({
 }
 
 export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
-  const { returnRate } = data.kpis;
+  const { recoveryYieldPct, collectionRate } = data.kpis;
 
   return (
     <Card className="border-border/60 overflow-hidden shadow-md">
@@ -191,14 +171,19 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
               Sack2Loop Flow Pipeline
             </CardTitle>
             <CardDescription className="mt-1 max-w-xl leading-relaxed">
-              Linear view of sack movement from distribution through returns,
-              recycling, and manufacturer purchase. Stages 1–3 show pcs with
-              estimated weight at 0.1 kg per sack.
+              Linear view of sack movement from distribution through returns collection
+              and collector processing/reproduction.
             </CardDescription>
           </div>
-          <div className="bg-gold/15 text-gold-foreground inline-flex items-center gap-2 rounded-full border border-gold/30 px-3 py-1 text-xs font-medium">
-            <span className="bg-gold size-2 rounded-full" />
-            {returnRate}% return rate
+          <div className="flex items-center gap-2">
+            <div className="bg-teal/15 text-teal inline-flex items-center gap-2 rounded-full border border-teal/30 px-3 py-1 text-xs font-medium">
+              <span className="bg-teal size-2 rounded-full" />
+              {collectionRate}% collected
+            </div>
+            <div className="bg-gold/15 text-gold-foreground inline-flex items-center gap-2 rounded-full border border-gold/30 px-3 py-1 text-xs font-medium">
+              <span className="bg-gold size-2 rounded-full" />
+              {recoveryYieldPct}% recovery yield
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -291,15 +276,11 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-flow-2 size-2.5 rounded-full" />
-            Returns
+            Collection
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-flow-3 size-2.5 rounded-full" />
-            Recycling
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="bg-flow-4 size-2.5 rounded-full" />
-            Manufacturing
+            Collector Processing &amp; Reproduction
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-gold size-2.5 rounded-full" />

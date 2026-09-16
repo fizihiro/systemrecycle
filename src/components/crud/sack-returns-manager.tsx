@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -67,13 +66,13 @@ export function SackReturnsManager({
   const [supplierId, setSupplierId] = useState("");
   const [farmerId, setFarmerId] = useState("");
   const [sackId, setSackId] = useState("");
-  const [passQty, setPassQty] = useState("0");
+  const [quantity, setQuantity] = useState("1");
   const [totalDiscountRm, setTotalDiscountRm] = useState("0");
   const [discountTouched, setDiscountTouched] = useState(false);
 
   const selectedSack = sacks.find((item) => String(item.id) === sackId);
   const suggestedDiscount = selectedSack
-    ? computeDiscount(Number(passQty || 0), selectedSack.discountValueRm)
+    ? computeDiscount(Number(quantity || 0), selectedSack.discountValueRm)
     : 0;
   const discountDisplay = discountTouched
     ? totalDiscountRm
@@ -85,7 +84,7 @@ export function SackReturnsManager({
     setSupplierId("");
     setFarmerId("");
     setSackId("");
-    setPassQty("0");
+    setQuantity("1");
     setTotalDiscountRm("0");
     setDiscountTouched(false);
   }
@@ -108,7 +107,7 @@ export function SackReturnsManager({
     setSupplierId(String(item.supplierId));
     setFarmerId(String(item.farmerId));
     setSackId(String(item.sackId));
-    setPassQty(String(item.passQty));
+    setQuantity(String(item.quantity));
     setTotalDiscountRm(String(item.totalDiscountRm));
     setDiscountTouched(true);
     setOpen(true);
@@ -152,7 +151,7 @@ export function SackReturnsManager({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Sack Returns"
-        description="Record returned sacks with pass/reject quantities and discount values."
+        description="Record returned sacks with collected quantities and discount incentives."
         action={
           <Button
             onClick={openCreate}
@@ -183,8 +182,7 @@ export function SackReturnsManager({
                 <TableHead>Farmer</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Sack</TableHead>
-                <TableHead>Pass</TableHead>
-                <TableHead>Reject</TableHead>
+                <TableHead>Quantity</TableHead>
                 <TableHead>Total Discount</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -196,8 +194,7 @@ export function SackReturnsManager({
                   <TableCell>{item.farmerName}</TableCell>
                   <TableCell>{item.supplierName}</TableCell>
                   <TableCell className="max-w-xs">{item.sackLabel}</TableCell>
-                  <TableCell>{item.passQty}</TableCell>
-                  <TableCell>{item.rejectQty}</TableCell>
+                  <TableCell className="font-medium">{item.quantity.toLocaleString()} pcs</TableCell>
                   <TableCell>{formatCurrency(item.totalDiscountRm)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -264,43 +261,20 @@ export function SackReturnsManager({
               placeholder="Select catalog item"
               options={sackOptions}
             />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="passQty">Pass Qty</Label>
-                <Input
-                  id="passQty"
-                  name="passQty"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={passQty}
-                  onChange={(event) => {
-                    setPassQty(event.target.value);
-                    setDiscountTouched(false);
-                  }}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rejectQty">Reject Qty</Label>
-                <Input
-                  id="rejectQty"
-                  name="rejectQty"
-                  type="number"
-                  min="0"
-                  step="1"
-                  defaultValue={editing?.rejectQty ?? 0}
-                  required
-                />
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="rejectReason">Reject Reason</Label>
-              <Textarea
-                id="rejectReason"
-                name="rejectReason"
-                defaultValue={editing?.rejectReason ?? ""}
-                placeholder="Optional reason for rejected sacks"
+              <Label htmlFor="quantity">Quantity (pcs)</Label>
+              <Input
+                id="quantity"
+                name="quantity"
+                type="number"
+                min="1"
+                step="1"
+                value={quantity}
+                onChange={(event) => {
+                  setQuantity(event.target.value);
+                  setDiscountTouched(false);
+                }}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -319,7 +293,7 @@ export function SackReturnsManager({
                 required
               />
               <p className="text-muted-foreground text-xs">
-                Auto-calculated from pass qty × discount value. You can override before saving.
+                Auto-calculated from quantity × discount value. You can override before saving.
               </p>
             </div>
             <FormError message={error} />

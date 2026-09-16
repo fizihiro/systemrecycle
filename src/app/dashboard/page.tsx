@@ -24,9 +24,9 @@ export default async function DashboardPage() {
               Sack2Loop Dashboard
             </h1>
             <p className="text-sidebar-foreground/85 max-w-xl text-sm leading-relaxed sm:text-base">
-              Track material leakages across the closed-loop chain, compare actual
-              vs potential farmer discounts, and monitor weight-normalised flow
-              from distribution through recycling.
+              Track circular flow across the closed-loop chain, compare actual
+              vs potential farmer discounts, and monitor weight-normalised recovery
+              from distribution through collector processing.
             </p>
           </div>
           <div className="grid w-full max-w-xl shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
@@ -37,24 +37,24 @@ export default async function DashboardPage() {
                 sub: analytics.kpis.distributedWeightFormatted,
               },
               {
-                label: "Stage 2 · Returned",
-                value: `${analytics.kpis.sacksReturnedTotal.toLocaleString()} pcs`,
-                sub: analytics.kpis.returnedWeightFormatted,
+                label: "Stage 2 · Collected",
+                value: `${analytics.kpis.sacksCollected.toLocaleString()} pcs`,
+                sub: analytics.kpis.collectedWeightFormatted,
+              },
+              {
+                label: "Recovery Yield",
+                value: `${analytics.kpis.recoveryYieldPct}%`,
+                sub: `${analytics.kpis.totalOutputWeightFormatted} output`,
               },
               {
                 label: "Return Gap",
                 value: `${analytics.leakages.returnGapPct}%`,
-                sub: "never returned",
+                sub: `${analytics.leakages.returnGapPieces.toLocaleString()} unreturned`,
               },
               {
-                label: "Reject Rate",
-                value: `${analytics.leakages.rejectRatePct}%`,
-                sub: "failed QC",
-              },
-              {
-                label: "Yield Loss",
-                value: `${analytics.leakages.recyclingYieldLossPct}%`,
-                sub: "recycler → mfg",
+                label: "Collection Rate",
+                value: `${analytics.kpis.collectionRate}%`,
+                sub: "collected / distributed",
               },
               {
                 label: "Discount Capture",

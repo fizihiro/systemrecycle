@@ -16,20 +16,20 @@ import {
   resolvePage,
   type PaginatedResult,
 } from "@/lib/pagination";
-import { recyclerDeliverySchema } from "@/lib/validations";
+import { collectorDeliverySchema } from "@/lib/validations";
 
-const PATH = "/dashboard/recycler-delivery";
+const PATH = "/dashboard/collector-delivery";
 
 function serialize(item: {
   id: number;
   date: Date;
   supplierId: number;
-  recyclerId: number;
+  collectorId: number;
   sackQty: number;
   inputWeightKg: { toString(): string };
   outputWeightKg: { toString(): string };
   supplier: { companyName: string };
-  recycler: { companyName: string };
+  collector: { companyName: string };
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -37,31 +37,31 @@ function serialize(item: {
     id: item.id,
     date: item.date.toISOString(),
     supplierId: item.supplierId,
-    recyclerId: item.recyclerId,
+    collectorId: item.collectorId,
     sackQty: item.sackQty,
     inputWeightKg: Number(item.inputWeightKg),
     outputWeightKg: Number(item.outputWeightKg),
     supplierName: item.supplier.companyName,
-    recyclerName: item.recycler.companyName,
+    collectorName: item.collector.companyName,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   };
 }
 
-export type RecyclerDeliveryRecord = ReturnType<typeof serialize>;
+export type CollectorDeliveryRecord = ReturnType<typeof serialize>;
 
-export async function getRecyclerDeliveries(
+export async function getCollectorDeliveries(
   page?: string | number,
-): Promise<PaginatedResult<RecyclerDeliveryRecord>> {
-  const total = await prisma.recyclerDelivery.count();
+): Promise<PaginatedResult<CollectorDeliveryRecord>> {
+  const total = await prisma.collectorDelivery.count();
   const pagination = buildPaginationMeta(total, resolvePage(page));
-  const items = await prisma.recyclerDelivery.findMany({
+  const items = await prisma.collectorDelivery.findMany({
     orderBy: [{ date: "desc" }, { id: "desc" }],
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
     include: {
       supplier: { select: { companyName: true } },
-      recycler: { select: { companyName: true } },
+      collector: { select: { companyName: true } },
     },
   });
 
@@ -69,17 +69,17 @@ export async function getRecyclerDeliveries(
 }
 
 function parseInput(formData: FormData) {
-  return recyclerDeliverySchema.safeParse({
+  return collectorDeliverySchema.safeParse({
     date: formData.get("date"),
     supplierId: formData.get("supplierId"),
-    recyclerId: formData.get("recyclerId"),
+    collectorId: formData.get("collectorId"),
     sackQty: formData.get("sackQty"),
     inputWeightKg: formData.get("inputWeightKg"),
     outputWeightKg: formData.get("outputWeightKg"),
   });
 }
 
-export async function createRecyclerDelivery(
+export async function createCollectorDelivery(
   formData: FormData,
 ): Promise<ActionResult> {
   const parsed = parseInput(formData);
@@ -87,7 +87,7 @@ export async function createRecyclerDelivery(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.recyclerDelivery.create({
+  await prisma.collectorDelivery.create({
     data: {
       ...parsed.data,
       date: new Date(parsed.data.date),
@@ -98,7 +98,7 @@ export async function createRecyclerDelivery(
   return actionSuccess();
 }
 
-export async function updateRecyclerDelivery(
+export async function updateCollectorDelivery(
   id: number,
   formData: FormData,
 ): Promise<ActionResult> {
@@ -107,7 +107,7 @@ export async function updateRecyclerDelivery(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.recyclerDelivery.update({
+  await prisma.collectorDelivery.update({
     where: { id },
     data: {
       ...parsed.data,
@@ -119,10 +119,10 @@ export async function updateRecyclerDelivery(
   return actionSuccess();
 }
 
-export async function deleteRecyclerDelivery(
+export async function deleteCollectorDelivery(
   id: number,
 ): Promise<ActionResult> {
-  await prisma.recyclerDelivery.delete({ where: { id } });
+  await prisma.collectorDelivery.delete({ where: { id } });
   revalidatePath(PATH);
   revalidatePath("/dashboard");
   return actionSuccess();

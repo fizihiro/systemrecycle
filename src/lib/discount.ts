@@ -1,6 +1,6 @@
 export function computeDiscount(
-  passQty: number,
+  quantity: number,
   discountValueRm: number,
 ): number {
-  return passQty * discountValueRm;
+  return quantity * discountValueRm;
 }

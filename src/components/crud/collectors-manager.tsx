@@ -4,11 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 
 import {
-  createRecycler,
-  deleteRecycler,
-  updateRecycler,
-  type RecyclerRecord,
-} from "@/lib/actions/recyclers";
+  createCollector,
+  deleteCollector,
+  updateCollector,
+  type CollectorRecord,
+} from "@/lib/actions/collectors";
 import { formatNumber } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,15 +41,15 @@ import {
 } from "@/components/crud/shared";
 import type { PaginationMeta } from "@/lib/pagination";
 
-export function RecyclersManager({
+export function CollectorsManager({
   items,
   pagination,
 }: {
-  items: RecyclerRecord[];
+  items: CollectorRecord[];
   pagination: PaginationMeta;
 }) {
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<RecyclerRecord | null>(null);
+  const [editing, setEditing] = useState<CollectorRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -65,8 +65,8 @@ export function RecyclersManager({
     setError(null);
     startTransition(async () => {
       const result = editing
-        ? await updateRecycler(editing.id, formData)
-        : await createRecycler(formData);
+        ? await updateCollector(editing.id, formData)
+        : await createCollector(formData);
 
       if (!result.success) {
         setError(result.error);
@@ -85,8 +85,8 @@ export function RecyclersManager({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Recyclers"
-        description="Manage recycler companies and their processing capacity."
+        title="Collectors"
+        description="Manage collector companies, collection hubs, and their processing capacity."
         action={
           <Button
             onClick={() => {
@@ -96,13 +96,13 @@ export function RecyclersManager({
             }}
           >
             <Plus />
-            Add Recycler
+            Add Collector
           </Button>
         }
       />
 
       {pagination.total === 0 ? (
-        <EmptyState message="No recyclers yet. Add your first recycler record." />
+        <EmptyState message="No collectors yet. Add your first collector record." />
       ) : (
         <DataTable pagination={pagination}>
           <Table>
@@ -119,8 +119,8 @@ export function RecyclersManager({
               {items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{item.id}</TableCell>
-                  <TableCell>{item.companyName}</TableCell>
-                  <TableCell>{formatNumber(item.processCapacityKg)}</TableCell>
+                  <TableCell className="font-medium">{item.companyName}</TableCell>
+                  <TableCell>{formatNumber(item.processCapacityKg)} kg</TableCell>
                   <TableCell>{item.phone}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -134,7 +134,7 @@ export function RecyclersManager({
                       />
                       <DeleteRecordButton
                         itemLabel={item.companyName}
-                        onDelete={() => deleteRecycler(item.id)}
+                        onDelete={() => deleteCollector(item.id)}
                       />
                     </div>
                   </TableCell>
@@ -148,7 +148,7 @@ export function RecyclersManager({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Recycler" : "Add Recycler"}</DialogTitle>
+            <DialogTitle>{editing ? "Edit Collector" : "Add Collector"}</DialogTitle>
           </DialogHeader>
           <form key={dialogKey} action={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -179,7 +179,7 @@ export function RecyclersManager({
             <FormError message={error} />
             <DialogFooter>
               <SubmitButton
-                label={editing ? "Save Changes" : "Create Recycler"}
+                label={editing ? "Save Changes" : "Create Collector"}
                 pending={isPending}
               />
             </DialogFooter>

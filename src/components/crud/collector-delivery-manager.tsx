@@ -4,11 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 
 import {
-  createRecyclerDelivery,
-  deleteRecyclerDelivery,
-  updateRecyclerDelivery,
-  type RecyclerDeliveryRecord,
-} from "@/lib/actions/recycler-delivery";
+  createCollectorDelivery,
+  deleteCollectorDelivery,
+  updateCollectorDelivery,
+  type CollectorDeliveryRecord,
+} from "@/lib/actions/collector-delivery";
 import { formatDate, formatNumber, toInputDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,29 +44,29 @@ import type { PaginationMeta } from "@/lib/pagination";
 
 type Option = { id: number; label: string };
 
-export function RecyclerDeliveryManager({
+export function CollectorDeliveryManager({
   items,
   pagination,
   suppliers,
-  recyclers,
+  collectors,
 }: {
-  items: RecyclerDeliveryRecord[];
+  items: CollectorDeliveryRecord[];
   pagination: PaginationMeta;
   suppliers: Option[];
-  recyclers: Option[];
+  collectors: Option[];
 }) {
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<RecyclerDeliveryRecord | null>(null);
+  const [editing, setEditing] = useState<CollectorDeliveryRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [supplierId, setSupplierId] = useState("");
-  const [recyclerId, setRecyclerId] = useState("");
+  const [collectorId, setCollectorId] = useState("");
 
   function resetForm() {
     setEditing(null);
     setError(null);
     setSupplierId("");
-    setRecyclerId("");
+    setCollectorId("");
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -81,11 +81,11 @@ export function RecyclerDeliveryManager({
     setOpen(true);
   }
 
-  function openEdit(item: RecyclerDeliveryRecord) {
+  function openEdit(item: CollectorDeliveryRecord) {
     setEditing(item);
     setError(null);
     setSupplierId(String(item.supplierId));
-    setRecyclerId(String(item.recyclerId));
+    setCollectorId(String(item.collectorId));
     setOpen(true);
   }
 
@@ -93,8 +93,8 @@ export function RecyclerDeliveryManager({
     setError(null);
     startTransition(async () => {
       const result = editing
-        ? await updateRecyclerDelivery(editing.id, formData)
-        : await createRecyclerDelivery(formData);
+        ? await updateCollectorDelivery(editing.id, formData)
+        : await createCollectorDelivery(formData);
 
       if (!result.success) {
         setError(result.error);
@@ -113,12 +113,12 @@ export function RecyclerDeliveryManager({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Recycler Delivery"
-        description="Record deliveries of collected sacks from suppliers to recyclers."
+        title="Collector Delivery"
+        description="Record deliveries of collected sacks from suppliers to collectors."
         action={
           <Button
             onClick={openCreate}
-            disabled={suppliers.length === 0 || recyclers.length === 0}
+            disabled={suppliers.length === 0 || collectors.length === 0}
           >
             <Plus />
             Add Delivery
@@ -126,14 +126,14 @@ export function RecyclerDeliveryManager({
         }
       />
 
-      {(suppliers.length === 0 || recyclers.length === 0) && (
-        <EmptyState message="Add at least one supplier and recycler before recording deliveries." />
+      {(suppliers.length === 0 || collectors.length === 0) && (
+        <EmptyState message="Add at least one supplier and collector before recording deliveries." />
       )}
 
       {pagination.total === 0 ? (
         suppliers.length > 0 &&
-        recyclers.length > 0 && (
-          <EmptyState message="No recycler deliveries recorded yet." />
+        collectors.length > 0 && (
+          <EmptyState message="No collector deliveries recorded yet." />
         )
       ) : (
         <DataTable pagination={pagination}>
@@ -142,7 +142,7 @@ export function RecyclerDeliveryManager({
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Supplier</TableHead>
-                <TableHead>Recycler</TableHead>
+                <TableHead>Collector</TableHead>
                 <TableHead>Sack Qty</TableHead>
                 <TableHead>Input Weight (KG)</TableHead>
                 <TableHead>Output Weight (KG)</TableHead>
@@ -154,10 +154,10 @@ export function RecyclerDeliveryManager({
                 <TableRow key={item.id}>
                   <TableCell>{formatDate(item.date)}</TableCell>
                   <TableCell>{item.supplierName}</TableCell>
-                  <TableCell>{item.recyclerName}</TableCell>
-                  <TableCell>{item.sackQty}</TableCell>
-                  <TableCell>{formatNumber(item.inputWeightKg)}</TableCell>
-                  <TableCell>{formatNumber(item.outputWeightKg)}</TableCell>
+                  <TableCell className="font-medium">{item.collectorName}</TableCell>
+                  <TableCell>{item.sackQty.toLocaleString()} pcs</TableCell>
+                  <TableCell>{formatNumber(item.inputWeightKg)} kg</TableCell>
+                  <TableCell>{formatNumber(item.outputWeightKg)} kg</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <EditRecordButton
@@ -166,7 +166,7 @@ export function RecyclerDeliveryManager({
                       />
                       <DeleteRecordButton
                         itemLabel={`delivery ${item.id}`}
-                        onDelete={() => deleteRecyclerDelivery(item.id)}
+                        onDelete={() => deleteCollectorDelivery(item.id)}
                       />
                     </div>
                   </TableCell>
@@ -206,19 +206,19 @@ export function RecyclerDeliveryManager({
               }))}
             />
             <FormSelect
-              id="recyclerId"
-              name="recyclerId"
-              label="Recycler"
-              value={recyclerId}
-              onValueChange={setRecyclerId}
-              placeholder="Select recycler"
-              options={recyclers.map((item) => ({
+              id="collectorId"
+              name="collectorId"
+              label="Collector"
+              value={collectorId}
+              onValueChange={setCollectorId}
+              placeholder="Select collector"
+              options={collectors.map((item) => ({
                 value: String(item.id),
                 label: item.label,
               }))}
             />
             <div className="space-y-2">
-              <Label htmlFor="sackQty">Sack Qty</Label>
+              <Label htmlFor="sackQty">Sack Qty (pcs)</Label>
               <Input
                 id="sackQty"
                 name="sackQty"

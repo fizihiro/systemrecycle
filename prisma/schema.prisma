@@ -31,7 +31,7 @@ model Supplier {
 
   fertilizerDistributions FertilizerDistribution[]
   sackReturns             SackReturn[]
-  recyclerDeliveries      RecyclerDelivery[]
+  collectorDeliveries     CollectorDelivery[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -39,32 +39,18 @@ model Supplier {
   @@map("supplier")
 }
 
-model Recycler {
+model Collector {
   id                Int     @id @default(autoincrement())
   companyName       String  @map("company_name")
   processCapacityKg Decimal @map("process_capacity_kg") @db.Decimal(12, 2)
   phone             String
 
-  recyclerDeliveries RecyclerDelivery[]
-  manufacturerSales  ManufacturerSales[]
+  collectorDeliveries CollectorDelivery[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("recycler")
-}
-
-model Manufacturer {
-  id          Int    @id @default(autoincrement())
-  companyName String @map("company_name")
-  phone       String
-
-  manufacturerSales ManufacturerSales[]
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("manufacturer")
+  @@map("collector")
 }
 
 model SackCatalog {
@@ -112,9 +98,7 @@ model SackReturn {
   farmerId        Int      @map("farmer_id")
   supplierId      Int      @map("supplier_id")
   sackId          Int      @map("sack_id")
-  passQty         Int      @map("pass_qty")
-  rejectQty       Int      @default(0) @map("reject_qty")
-  rejectReason    String?  @map("reject_reason") @db.Text
+  quantity        Int      @map("quantity")
   totalDiscountRm Decimal  @map("total_discount_rm") @db.Decimal(10, 2)
 
   farmer   Farmer      @relation(fields: [farmerId], references: [id])
@@ -130,45 +114,25 @@ model SackReturn {
   @@map("sack_return")
 }
 
-model RecyclerDelivery {
+model CollectorDelivery {
   id             Int      @id @default(autoincrement())
   date           DateTime @db.Date
   supplierId     Int      @map("supplier_id")
-  recyclerId     Int      @map("recycler_id")
+  collectorId    Int      @map("collector_id")
   sackQty        Int      @map("sack_qty")
   inputWeightKg  Decimal  @map("input_weight_kg") @db.Decimal(12, 2)
   outputWeightKg Decimal  @map("output_weight_kg") @db.Decimal(12, 2)
 
-  supplier Supplier @relation(fields: [supplierId], references: [id])
-  recycler Recycler @relation(fields: [recyclerId], references: [id])
+  supplier  Supplier  @relation(fields: [supplierId], references: [id])
+  collector Collector @relation(fields: [collectorId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([date])
   @@index([supplierId])
-  @@index([recyclerId])
-  @@map("recycler_delivery")
-}
-
-model ManufacturerSales {
-  id               Int      @id @default(autoincrement())
-  date             DateTime @db.Date
-  recyclerId       Int      @map("recycler_id")
-  manufacturerId   Int      @map("manufacturer_id")
-  purchaseWeightKg Decimal  @map("purchase_weight_kg") @db.Decimal(12, 2)
-  salesPriceRm     Decimal  @map("sales_price_rm") @db.Decimal(12, 2)
-
-  recycler     Recycler     @relation(fields: [recyclerId], references: [id])
-  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([date])
-  @@index([recyclerId])
-  @@index([manufacturerId])
-  @@map("manufacturer_sales")
+  @@index([collectorId])
+  @@map("collector_delivery")
 }
 
 // ─── Auth Tables (better-auth) ───────────────────────────────

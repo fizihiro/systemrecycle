@@ -37,7 +37,7 @@ function FarmerCard({
         <div className="flex justify-between gap-4">
           <dt className="text-muted-foreground">Returned / distributed</dt>
           <dd className="font-semibold tabular-nums">
-            {farmer.returnedPassQty.toLocaleString()} /{" "}
+            {farmer.returnedQty.toLocaleString()} /{" "}
             {farmer.distributedQty.toLocaleString()} pcs
           </dd>
         </div>

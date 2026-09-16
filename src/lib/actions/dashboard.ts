@@ -18,7 +18,7 @@ type DiscountComparisonRow = {
   sackType: string;
   actualDiscountRm: number;
   potentialDiscountRm: number;
-  passQty: number;
+  collectedQty: number;
   distributedQty: number;
 };
 type SupplierFlowRow = {
@@ -30,8 +30,7 @@ type FarmerPerformanceRow = {
   farmerId: number;
   farmerName: string;
   distributedQty: number;
-  returnedPassQty: number;
-  returnedRejectQty: number;
+  returnedQty: number;
   actualDiscountRm: number;
   potentialDiscountRm: number;
 };
@@ -42,12 +41,10 @@ export async function getDashboardAnalytics() {
   const [
     farmers,
     suppliers,
-    recyclers,
-    manufacturers,
+    collectors,
     distributionAgg,
     returnAgg,
     deliveryAgg,
-    salesAgg,
     discountAggregate,
     monthlyDistribution,
     monthlyReturns,
@@ -59,17 +56,13 @@ export async function getDashboardAnalytics() {
   ] = await Promise.all([
     prisma.farmer.count(),
     prisma.supplier.count(),
-    prisma.recycler.count(),
-    prisma.manufacturer.count(),
+    prisma.collector.count(),
     prisma.fertilizerDistribution.aggregate({ _sum: { quantity: true } }),
     prisma.sackReturn.aggregate({
-      _sum: { passQty: true, rejectQty: true },
+      _sum: { quantity: true },
     }),
-    prisma.recyclerDelivery.aggregate({
+    prisma.collectorDelivery.aggregate({
       _sum: { sackQty: true, inputWeightKg: true, outputWeightKg: true },
-    }),
-    prisma.manufacturerSales.aggregate({
-      _sum: { purchaseWeightKg: true, salesPriceRm: true },
     }),
     prisma.sackReturn.aggregate({ _sum: { totalDiscountRm: true } }),
     prisma.$queryRaw<MonthlyRow[]>`
@@ -82,14 +75,12 @@ export async function getDashboardAnalytics() {
     prisma.$queryRaw<
       Array<{
         monthKey: string;
-        returnedPass: number;
-        returnedReject: number;
+        returned: number;
         discountRm: number;
       }>
     >`
       SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey,
-             CAST(SUM(pass_qty) AS DECIMAL(20,0)) AS returnedPass,
-             CAST(SUM(reject_qty) AS DECIMAL(20,0)) AS returnedReject,
+             CAST(SUM(quantity) AS DECIMAL(20,0)) AS returned,
              CAST(SUM(total_discount_rm) AS DECIMAL(20,2)) AS discountRm
       FROM sack_return
       GROUP BY monthKey
@@ -98,7 +89,7 @@ export async function getDashboardAnalytics() {
     prisma.$queryRaw<MonthlyRow[]>`
       SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey,
              CAST(SUM(sack_qty) AS DECIMAL(20,0)) AS value
-      FROM recycler_delivery
+      FROM collector_delivery
       GROUP BY monthKey
       ORDER BY monthKey
     `,
@@ -129,10 +120,10 @@ export async function getDashboardAnalytics() {
                  WHERE fd.sack_id = sc.id
                ), 0) AS DECIMAL(20,0)) AS distributedQty,
                CAST(COALESCE((
-                 SELECT SUM(sr.pass_qty)
+                 SELECT SUM(sr.quantity)
                  FROM sack_return sr
                  WHERE sr.sack_id = sc.id
-               ), 0) AS DECIMAL(20,0)) AS passQty,
+               ), 0) AS DECIMAL(20,0)) AS collectedQty,
                sc.discount_value_rm AS discountValueRm
         FROM sack_catalog sc
       ) AS comparison
@@ -150,7 +141,7 @@ export async function getDashboardAnalytics() {
     `,
     prisma.$queryRaw<SupplierFlowRow[]>`
       SELECT s.company_name AS name,
-             CAST(SUM(sr.pass_qty + sr.reject_qty) AS DECIMAL(20,0)) AS returned
+             CAST(SUM(sr.quantity) AS DECIMAL(20,0)) AS returned
       FROM sack_return sr
       JOIN supplier s ON s.id = sr.supplier_id
       GROUP BY s.company_name
@@ -159,8 +150,7 @@ export async function getDashboardAnalytics() {
       SELECT f.id AS farmerId,
              f.name AS farmerName,
              CAST(COALESCE(d.distributedQty, 0) AS DECIMAL(20,0)) AS distributedQty,
-             CAST(COALESCE(r.passQty, 0) AS DECIMAL(20,0)) AS returnedPassQty,
-             CAST(COALESCE(r.rejectQty, 0) AS DECIMAL(20,0)) AS returnedRejectQty,
+             CAST(COALESCE(r.returnedQty, 0) AS DECIMAL(20,0)) AS returnedQty,
              CAST(COALESCE(r.actualDiscount, 0) AS DECIMAL(20,2)) AS actualDiscountRm,
              CAST(COALESCE(p.potentialDiscount, 0) AS DECIMAL(20,2)) AS potentialDiscountRm
       FROM farmer f
@@ -171,8 +161,7 @@ export async function getDashboardAnalytics() {
       ) d ON d.farmer_id = f.id
       LEFT JOIN (
         SELECT farmer_id,
-               SUM(pass_qty) AS passQty,
-               SUM(reject_qty) AS rejectQty,
+               SUM(quantity) AS returnedQty,
                SUM(total_discount_rm) AS actualDiscount
         FROM sack_return
         GROUP BY farmer_id
@@ -189,31 +178,21 @@ export async function getDashboardAnalytics() {
   ]);
 
   const sacksDistributed = Number(distributionAgg._sum.quantity ?? 0);
-  const sacksReturnedPass = Number(returnAgg._sum.passQty ?? 0);
-  const sacksReturnedReject = Number(returnAgg._sum.rejectQty ?? 0);
-  const sacksReturnedTotal = sacksReturnedPass + sacksReturnedReject;
-  const sacksToRecycler = Number(deliveryAgg._sum.sackQty ?? 0);
+  const sacksCollected = Number(returnAgg._sum.quantity ?? 0);
+  const sacksToCollector = Number(deliveryAgg._sum.sackQty ?? 0);
   const totalDiscountRm = Number(discountAggregate._sum.totalDiscountRm ?? 0);
   const totalInputWeightKg = Number(deliveryAgg._sum.inputWeightKg ?? 0);
   const totalOutputWeightKg = Number(deliveryAgg._sum.outputWeightKg ?? 0);
-  const totalPurchaseWeightKg = Number(salesAgg._sum.purchaseWeightKg ?? 0);
-  const totalSalesRevenueRm = Number(salesAgg._sum.salesPriceRm ?? 0);
 
   const distributedWeightKg = estimateSackWeightKg(sacksDistributed);
-  const returnedWeightKg = estimateSackWeightKg(sacksReturnedTotal);
-  const returnedPassWeightKg = estimateSackWeightKg(sacksReturnedPass);
+  const collectedWeightKg = estimateSackWeightKg(sacksCollected);
 
-  const returnRate = pct(sacksReturnedPass, sacksDistributed);
-  const recoveryRate = pct(totalOutputWeightKg, totalInputWeightKg);
+  const collectionRate = pct(sacksCollected, sacksDistributed);
+  const recoveryYieldPct = pct(totalOutputWeightKg, totalInputWeightKg);
 
   const returnGapPct = pct(
-    Math.max(0, sacksDistributed - sacksReturnedTotal),
+    Math.max(0, sacksDistributed - sacksCollected),
     sacksDistributed,
-  );
-  const rejectRatePct = pct(sacksReturnedReject, sacksReturnedTotal);
-  const recyclingYieldLossPct = pct(
-    Math.max(0, totalOutputWeightKg - totalPurchaseWeightKg),
-    totalOutputWeightKg,
   );
 
   const monthKeys = new Set<string>();
@@ -237,9 +216,8 @@ export async function getDashboardAnalytics() {
         month: monthLabel(key),
         monthKey: key,
         distributed: distributionMap.get(key) ?? 0,
-        returnedPass: Number(returns?.returnedPass ?? 0),
-        returnedReject: Number(returns?.returnedReject ?? 0),
-        toRecycler: deliveryMap.get(key) ?? 0,
+        collected: Number(returns?.returned ?? 0),
+        toCollector: deliveryMap.get(key) ?? 0,
       };
     });
 
@@ -258,7 +236,7 @@ export async function getDashboardAnalytics() {
       sackType: row.sackType,
       actualDiscountRm,
       potentialDiscountRm,
-      passQty: Number(row.passQty),
+      collectedQty: Number(row.collectedQty),
       distributedQty,
       captureRate: pct(actualDiscountRm, potentialDiscountRm),
     };
@@ -283,7 +261,7 @@ export async function getDashboardAnalytics() {
   const farmerMetrics = farmerPerformanceRaw
     .map((row) => {
       const distributedQty = Number(row.distributedQty);
-      const returnedPassQty = Number(row.returnedPassQty);
+      const returnedQty = Number(row.returnedQty);
       const actualDiscountRm = Number(row.actualDiscountRm);
       const potentialDiscountRm = Number(row.potentialDiscountRm);
 
@@ -291,9 +269,8 @@ export async function getDashboardAnalytics() {
         farmerId: Number(row.farmerId),
         farmerName: row.farmerName,
         distributedQty,
-        returnedPassQty,
-        returnedRejectQty: Number(row.returnedRejectQty),
-        returnRate: pct(returnedPassQty, distributedQty),
+        returnedQty,
+        returnRate: pct(returnedQty, distributedQty),
         actualDiscountRm,
         potentialDiscountRm,
         actualDiscountRmFormatted: formatCurrency(actualDiscountRm),
@@ -304,7 +281,7 @@ export async function getDashboardAnalytics() {
     .filter((f) => f.distributedQty >= 10);
 
   const sortedByReturnRate = [...farmerMetrics].sort(
-    (a, b) => b.returnRate - a.returnRate || b.returnedPassQty - a.returnedPassQty,
+    (a, b) => b.returnRate - a.returnRate || b.returnedQty - a.returnedQty,
   );
   const topPerformingFarmer = sortedByReturnRate[0] ?? null;
   const lowestPerformingFarmer =
@@ -329,34 +306,19 @@ export async function getDashboardAnalytics() {
       {
         key: "collection",
         label: "Collection Point",
-        pcs: sacksReturnedTotal,
-        kg: returnedWeightKg,
-        sublabel: `${sacksReturnedPass.toLocaleString()} pass · ${sacksReturnedReject.toLocaleString()} reject`,
+        pcs: sacksCollected,
+        kg: collectedWeightKg,
       },
       {
-        key: "recycler",
-        label: "Recycler",
-        pcs: sacksToRecycler,
+        key: "collector",
+        label: "Collector Hub",
+        pcs: sacksToCollector,
         kg: totalInputWeightKg,
-      },
-      {
-        key: "manufacturer",
-        label: "Plastic Manufacturer",
-        pcs: null,
-        kg: totalPurchaseWeightKg,
-      },
-      {
-        key: "newSacks",
-        label: "New PP Sacks",
-        pcs: null,
-        kg: totalOutputWeightKg,
+        outputKg: totalOutputWeightKg,
       },
     ],
-    leakages: {
-      returnGapPct,
-      rejectRatePct,
-      recyclingYieldLossPct,
-    },
+    recoveryYieldPct,
+    returnGapPct,
     weightEstimateKg: SACK_ESTIMATED_WEIGHT_KG,
   };
 
@@ -364,13 +326,10 @@ export async function getDashboardAnalytics() {
     kpis: {
       farmers,
       suppliers,
-      recyclers,
-      manufacturers,
+      collectors,
       sacksDistributed,
-      sacksReturnedPass,
-      sacksReturnedReject,
-      sacksReturnedTotal,
-      sacksToRecycler,
+      sacksCollected,
+      sacksToCollector,
       totalDiscountRm,
       totalDiscountRmFormatted: formatCurrency(totalDiscountRm),
       totalPotentialDiscountRm,
@@ -378,27 +337,18 @@ export async function getDashboardAnalytics() {
       discountCaptureRate,
       totalInputWeightKg,
       totalOutputWeightKg,
-      totalPurchaseWeightKg,
-      totalSalesRevenueRm,
-      totalSalesRevenueRmFormatted: formatCurrency(totalSalesRevenueRm),
-      returnRate,
-      recoveryRate,
+      collectionRate,
+      recoveryYieldPct,
       distributedWeightKg,
-      returnedWeightKg,
-      returnedPassWeightKg,
+      collectedWeightKg,
       distributedWeightFormatted: `${formatNumber(distributedWeightKg)} kg`,
-      returnedWeightFormatted: `${formatNumber(returnedWeightKg)} kg`,
+      collectedWeightFormatted: `${formatNumber(collectedWeightKg)} kg`,
       totalInputWeightFormatted: `${formatNumber(totalInputWeightKg)} kg`,
       totalOutputWeightFormatted: `${formatNumber(totalOutputWeightKg)} kg`,
-      totalPurchaseWeightFormatted: `${formatNumber(totalPurchaseWeightKg)} kg`,
     },
     leakages: {
       returnGapPct,
-      rejectRatePct,
-      recyclingYieldLossPct,
-      returnGapPieces: Math.max(0, sacksDistributed - sacksReturnedTotal),
-      rejectPieces: sacksReturnedReject,
-      yieldLossKg: Math.max(0, totalOutputWeightKg - totalPurchaseWeightKg),
+      returnGapPieces: Math.max(0, sacksDistributed - sacksCollected),
     },
     circularFlow,
     farmerPerformance: {
@@ -409,16 +359,11 @@ export async function getDashboardAnalytics() {
     discountComparison,
     discountMonthly,
     supplierFlow,
-    returnQuality: [
-      { name: "pass", label: "Pass", value: sacksReturnedPass },
-      { name: "reject", label: "Reject", value: sacksReturnedReject },
-    ],
     weightTotals: [
-      { stage: "Distributed (est.)", value: distributedWeightKg, fill: "input" },
-      { stage: "Returned (est.)", value: returnedWeightKg, fill: "output" },
-      { stage: "Recycler Input", value: totalInputWeightKg, fill: "input" },
-      { stage: "Recycler Output", value: totalOutputWeightKg, fill: "output" },
-      { stage: "Manufacturer Purchase", value: totalPurchaseWeightKg, fill: "purchase" },
+      { stage: "Distributed (est.)", value: distributedWeightKg, fill: "distributed" },
+      { stage: "Collected (est.)", value: collectedWeightKg, fill: "collected" },
+      { stage: "Collector Input", value: totalInputWeightKg, fill: "input" },
+      { stage: "Collector Output", value: totalOutputWeightKg, fill: "output" },
     ],
   };
 }
@@ -428,7 +373,10 @@ export async function getDashboardStats() {
   return {
     farmers: analytics.kpis.farmers,
     suppliers: analytics.kpis.suppliers,
-    sackReturns: analytics.kpis.sacksReturnedTotal,
+    collectors: analytics.kpis.collectors,
+    sacksDistributed: analytics.kpis.sacksDistributed,
+    sacksCollected: analytics.kpis.sacksCollected,
+    recoveryYieldPct: analytics.kpis.recoveryYieldPct,
     totalDiscountRm: analytics.kpis.totalDiscountRm,
     totalDiscountRmFormatted: analytics.kpis.totalDiscountRmFormatted,
   };

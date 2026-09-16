@@ -16,9 +16,9 @@ import {
   resolvePage,
   type PaginatedResult,
 } from "@/lib/pagination";
-import { recyclerSchema } from "@/lib/validations";
+import { collectorSchema } from "@/lib/validations";
 
-const PATH = "/dashboard/recyclers";
+const PATH = "/dashboard/collectors";
 
 function serialize(item: {
   id: number;
@@ -38,14 +38,14 @@ function serialize(item: {
   };
 }
 
-export type RecyclerRecord = ReturnType<typeof serialize>;
+export type CollectorRecord = ReturnType<typeof serialize>;
 
-export async function getRecyclers(
+export async function getCollectors(
   page?: string | number,
-): Promise<PaginatedResult<RecyclerRecord>> {
-  const total = await prisma.recycler.count();
+): Promise<PaginatedResult<CollectorRecord>> {
+  const total = await prisma.collector.count();
   const pagination = buildPaginationMeta(total, resolvePage(page));
-  const items = await prisma.recycler.findMany({
+  const items = await prisma.collector.findMany({
     orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -54,22 +54,22 @@ export async function getRecyclers(
   return paginated(items.map(serialize), pagination);
 }
 
-export async function getRecyclerOptions() {
-  return prisma.recycler.findMany({
+export async function getCollectorOptions() {
+  return prisma.collector.findMany({
     orderBy: { companyName: "asc" },
     select: { id: true, companyName: true },
   });
 }
 
 function parseInput(formData: FormData) {
-  return recyclerSchema.safeParse({
+  return collectorSchema.safeParse({
     companyName: formData.get("companyName"),
     processCapacityKg: formData.get("processCapacityKg"),
     phone: formData.get("phone"),
   });
 }
 
-export async function createRecycler(
+export async function createCollector(
   formData: FormData,
 ): Promise<ActionResult> {
   const parsed = parseInput(formData);
@@ -77,12 +77,12 @@ export async function createRecycler(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.recycler.create({ data: parsed.data });
+  await prisma.collector.create({ data: parsed.data });
   revalidatePath(PATH);
   return actionSuccess();
 }
 
-export async function updateRecycler(
+export async function updateCollector(
   id: number,
   formData: FormData,
 ): Promise<ActionResult> {
@@ -91,19 +91,19 @@ export async function updateRecycler(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.recycler.update({ where: { id }, data: parsed.data });
+  await prisma.collector.update({ where: { id }, data: parsed.data });
   revalidatePath(PATH);
   return actionSuccess();
 }
 
-export async function deleteRecycler(id: number): Promise<ActionResult> {
+export async function deleteCollector(id: number): Promise<ActionResult> {
   try {
-    await prisma.recycler.delete({ where: { id } });
+    await prisma.collector.delete({ where: { id } });
     revalidatePath(PATH);
     return actionSuccess();
   } catch {
     return actionError(
-      "Unable to delete this recycler because they are linked to transactions.",
+      "Unable to delete this collector because they are linked to deliveries.",
     );
   }
 }

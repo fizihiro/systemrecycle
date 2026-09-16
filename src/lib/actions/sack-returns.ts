@@ -28,9 +28,7 @@ function serialize(item: {
   farmerId: number;
   supplierId: number;
   sackId: number;
-  passQty: number;
-  rejectQty: number;
-  rejectReason: string | null;
+  quantity: number;
   totalDiscountRm: { toString(): string };
   farmer: { name: string };
   supplier: { companyName: string };
@@ -48,9 +46,7 @@ function serialize(item: {
     farmerId: item.farmerId,
     supplierId: item.supplierId,
     sackId: item.sackId,
-    passQty: item.passQty,
-    rejectQty: item.rejectQty,
-    rejectReason: item.rejectReason,
+    quantity: item.quantity,
     totalDiscountRm: Number(item.totalDiscountRm),
     farmerName: item.farmer.name,
     supplierName: item.supplier.companyName,
@@ -93,9 +89,7 @@ function parseInput(formData: FormData) {
     farmerId: formData.get("farmerId"),
     supplierId: formData.get("supplierId"),
     sackId: formData.get("sackId"),
-    passQty: formData.get("passQty"),
-    rejectQty: formData.get("rejectQty"),
-    rejectReason: formData.get("rejectReason"),
+    quantity: formData.get("quantity"),
     totalDiscountRm: formData.get("totalDiscountRm"),
   });
 }
@@ -106,10 +100,6 @@ export async function createSackReturn(
   const parsed = parseInput(formData);
   if (!parsed.success) {
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
-  }
-
-  if (parsed.data.passQty === 0 && parsed.data.rejectQty === 0) {
-    return actionError("Pass quantity or reject quantity must be greater than zero.");
   }
 
   await prisma.sackReturn.create({
@@ -130,10 +120,6 @@ export async function updateSackReturn(
   const parsed = parseInput(formData);
   if (!parsed.success) {
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
-  }
-
-  if (parsed.data.passQty === 0 && parsed.data.rejectQty === 0) {
-    return actionError("Pass quantity or reject quantity must be greater than zero.");
   }
 
   await prisma.sackReturn.update({
@@ -157,7 +143,7 @@ export async function deleteSackReturn(id: number): Promise<ActionResult> {
 
 export async function getSuggestedDiscount(
   sackId: number,
-  passQty: number,
+  quantity: number,
 ): Promise<number> {
   const sack = await prisma.sackCatalog.findUnique({
     where: { id: sackId },
@@ -168,5 +154,5 @@ export async function getSuggestedDiscount(
     return 0;
   }
 
-  return computeDiscount(passQty, Number(sack.discountValueRm));
+  return computeDiscount(quantity, Number(sack.discountValueRm));
 }

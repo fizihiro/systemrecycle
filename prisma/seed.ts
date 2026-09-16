@@ -76,19 +76,12 @@ const SUPPLIERS = [
   { companyName: "East Coast Agro Terengganu", location: "Kuala Terengganu", phone: "09-6234500" },
 ];
 
-const RECYCLERS = [
-  { companyName: "EcoPlast Recycling Sdn Bhd", processCapacityKg: 500000, phone: "03-77889900" },
-  { companyName: "GreenCycle Industries", processCapacityKg: 350000, phone: "04-4567890" },
-  { companyName: "Malaysia Polymer Recyclers", processCapacityKg: 420000, phone: "07-3344556" },
-  { companyName: "Circular Plastics Johor", processCapacityKg: 280000, phone: "07-2233445" },
-  { companyName: "Sustainable Sack Processing", processCapacityKg: 310000, phone: "05-6677889" },
-];
-
-const MANUFACTURERS = [
-  { companyName: "PackPro Manufacturing", phone: "03-11223344" },
-  { companyName: "FlexiSack Industries", phone: "04-55667788" },
-  { companyName: "UniPlast Products Sdn Bhd", phone: "07-99887766" },
-  { companyName: "Advanced Packaging Solutions", phone: "06-44556677" },
+const COLLECTORS = [
+  { companyName: "EcoPlast Collector & Processing", processCapacityKg: 500000, phone: "03-77889900" },
+  { companyName: "GreenCycle Recovery Hub", processCapacityKg: 350000, phone: "04-4567890" },
+  { companyName: "Malaysia Polymer Collectors", processCapacityKg: 420000, phone: "07-3344556" },
+  { companyName: "Circular Sack Collectors Johor", processCapacityKg: 280000, phone: "07-2233445" },
+  { companyName: "Sustainable Sack Processing Hub", processCapacityKg: 310000, phone: "05-6677889" },
 ];
 
 const FARMER_FIRST = [
@@ -116,14 +109,6 @@ const ADDRESSES = [
   "Felda Kemahang, Jeli, Kelantan",
   "Kampung Permatang, Sungai Petani, Kedah",
   "Taman Sri Padi, Kota Tinggi, Johor",
-];
-
-const REJECT_REASONS = [
-  "Torn or punctured sack",
-  "Contaminated with fertilizer residue",
-  "Wrong sack type returned",
-  "Excessive UV damage",
-  "Wet and mouldy material",
 ];
 
 const MONTHLY_DISTRIBUTION_COUNTS: Array<{ year: number; month: number; count: number }> = [
@@ -182,15 +167,13 @@ async function insertBatches<T>(
 
 async function clearBusinessData() {
   console.log("Clearing existing business data...");
-  await prisma.manufacturerSales.deleteMany();
-  await prisma.recyclerDelivery.deleteMany();
+  await prisma.collectorDelivery.deleteMany();
   await prisma.sackReturn.deleteMany();
   await prisma.fertilizerDistribution.deleteMany();
   await prisma.sackCatalog.deleteMany();
   await prisma.farmer.deleteMany();
   await prisma.supplier.deleteMany();
-  await prisma.recycler.deleteMany();
-  await prisma.manufacturer.deleteMany();
+  await prisma.collector.deleteMany();
 }
 
 async function seedMasters() {
@@ -214,21 +197,15 @@ async function seedMasters() {
     SUPPLIERS.map((supplier) => prisma.supplier.create({ data: supplier })),
   );
 
-  const recyclers = await Promise.all(
-    RECYCLERS.map((recycler) =>
-      prisma.recycler.create({
+  const collectors = await Promise.all(
+    COLLECTORS.map((collector) =>
+      prisma.collector.create({
         data: {
-          companyName: recycler.companyName,
-          processCapacityKg: recycler.processCapacityKg,
-          phone: recycler.phone,
+          companyName: collector.companyName,
+          processCapacityKg: collector.processCapacityKg,
+          phone: collector.phone,
         },
       }),
-    ),
-  );
-
-  const manufacturers = await Promise.all(
-    MANUFACTURERS.map((manufacturer) =>
-      prisma.manufacturer.create({ data: manufacturer }),
     ),
   );
 
@@ -246,7 +223,7 @@ async function seedMasters() {
     }),
   );
 
-  return { sacks, suppliers, recyclers, manufacturers, farmers };
+  return { sacks, suppliers, collectors, farmers };
 }
 
 type DistributionRow = {
@@ -291,9 +268,7 @@ type ReturnAccumulator = {
   farmerId: number;
   supplierId: number;
   sackId: number;
-  passQty: number;
-  rejectQty: number;
-  rejectReason: string | null;
+  quantity: number;
   totalDiscountRm: number;
 };
 
@@ -314,7 +289,7 @@ async function seedReturns(
   );
 
   const totalDistributed = distributions.reduce((sum, row) => sum + row.quantity, 0);
-  const targetPassQty = Math.round(totalDistributed * 0.32);
+  const targetQuantity = Math.round(totalDistributed * 0.35);
   const returnRecordCount = 42_000;
 
   const returnIndices = new Set<number>();
@@ -323,28 +298,27 @@ async function seedReturns(
   }
 
   const returns: ReturnAccumulator[] = [];
-  let allocatedPass = 0;
+  let allocatedQuantity = 0;
   const sortedIndices = Array.from(returnIndices);
 
   for (let i = 0; i < sortedIndices.length; i++) {
     const dist = distributions[sortedIndices[i]!]!;
-    const remaining = targetPassQty - allocatedPass;
+    const remaining = targetQuantity - allocatedQuantity;
     const recordsLeft = sortedIndices.length - i;
 
-    let passQty: number;
+    let quantity: number;
     if (recordsLeft <= 1) {
-      passQty = Math.max(1, remaining);
+      quantity = Math.max(1, remaining);
     } else {
       const avgNeeded = remaining / recordsLeft;
-      passQty = Math.max(1, Math.min(6, Math.round(avgNeeded + randomInt(-1, 1))));
+      quantity = Math.max(1, Math.min(6, Math.round(avgNeeded + randomInt(-1, 1))));
     }
 
-    if (allocatedPass + passQty > targetPassQty && i < sortedIndices.length - 1) {
-      passQty = Math.max(1, targetPassQty - allocatedPass);
+    if (allocatedQuantity + quantity > targetQuantity && i < sortedIndices.length - 1) {
+      quantity = Math.max(1, targetQuantity - allocatedQuantity);
     }
 
-    allocatedPass += passQty;
-    const rejectQty = Math.random() < 0.13 ? randomInt(1, 2) : 0;
+    allocatedQuantity += quantity;
     const discount = sackDiscountMap.get(dist.sackId) ?? 1.5;
 
     returns.push({
@@ -352,10 +326,8 @@ async function seedReturns(
       farmerId: dist.farmerId,
       supplierId: dist.supplierId,
       sackId: dist.sackId,
-      passQty,
-      rejectQty,
-      rejectReason: rejectQty > 0 ? pick(REJECT_REASONS) : null,
-      totalDiscountRm: round2(passQty * discount),
+      quantity,
+      totalDiscountRm: round2(quantity * discount),
     });
   }
 
@@ -363,23 +335,22 @@ async function seedReturns(
     prisma.sackReturn.createMany({ data: batch }),
   );
 
-  const totalPass = returns.reduce((sum, row) => sum + row.passQty, 0);
-  const totalReject = returns.reduce((sum, row) => sum + row.rejectQty, 0);
+  const totalCollected = returns.reduce((sum, row) => sum + row.quantity, 0);
 
-  return { returns, totalPass, totalReject, sackWeightMap };
+  return { returns, totalCollected, sackWeightMap };
 }
 
-async function seedRecyclerDeliveries(
+async function seedCollectorDeliveries(
   masters: Awaited<ReturnType<typeof seedMasters>>,
   returns: ReturnAccumulator[],
   sackWeightMap: Map<number, number>,
 ) {
-  console.log("Seeding recycler deliveries...");
+  console.log("Seeding collector deliveries...");
 
   type DeliveryBucket = {
     monthKey: string;
     supplierId: number;
-    passQty: number;
+    quantity: number;
     weightKg: number;
   };
 
@@ -388,17 +359,17 @@ async function seedRecyclerDeliveries(
   for (const row of returns) {
     const monthKey = `${row.date.getUTCFullYear()}-${String(row.date.getUTCMonth() + 1).padStart(2, "0")}`;
     const key = `${monthKey}:${row.supplierId}`;
-    const weight = row.passQty * (sackWeightMap.get(row.sackId) ?? 0.14);
+    const weight = row.quantity * (sackWeightMap.get(row.sackId) ?? 0.14);
     const existing = buckets.get(key);
 
     if (existing) {
-      existing.passQty += row.passQty;
+      existing.quantity += row.quantity;
       existing.weightKg += weight;
     } else {
       buckets.set(key, {
         monthKey,
         supplierId: row.supplierId,
-        passQty: row.passQty,
+        quantity: row.quantity,
         weightKg: weight,
       });
     }
@@ -407,127 +378,78 @@ async function seedRecyclerDeliveries(
   const deliveries = Array.from(buckets.values()).map((bucket) => {
     const [year, month] = bucket.monthKey.split("-").map(Number);
     const inputWeightKg = round2(bucket.weightKg);
-    const recoveryRate = 0.76 + Math.random() * 0.08;
+    const recoveryRate = 0.82 + Math.random() * 0.08;
     const outputWeightKg = round2(inputWeightKg * recoveryRate);
 
     return {
       date: addMonths(randomDateInMonth(year!, month!), randomInt(0, 1)),
       supplierId: bucket.supplierId,
-      recyclerId: pick(masters.recyclers.map((r) => r.id)),
-      sackQty: bucket.passQty,
+      collectorId: pick(masters.collectors.map((c) => c.id)),
+      sackQty: bucket.quantity,
       inputWeightKg,
       outputWeightKg,
     };
   });
 
-  await insertBatches("Recycler deliveries", deliveries, (batch) =>
-    prisma.recyclerDelivery.createMany({ data: batch }),
+  await insertBatches("Collector deliveries", deliveries, (batch) =>
+    prisma.collectorDelivery.createMany({ data: batch }),
   );
 
   return deliveries;
-}
-
-async function seedManufacturerSales(
-  masters: Awaited<ReturnType<typeof seedMasters>>,
-  deliveries: Awaited<ReturnType<typeof seedRecyclerDeliveries>>,
-) {
-  console.log("Seeding manufacturer sales...");
-
-  type SalesBucket = {
-    monthKey: string;
-    recyclerId: number;
-    outputWeightKg: number;
-  };
-
-  const buckets = new Map<string, SalesBucket>();
-
-  for (const delivery of deliveries) {
-    const monthKey = `${delivery.date.getUTCFullYear()}-${String(delivery.date.getUTCMonth() + 1).padStart(2, "0")}`;
-    const key = `${monthKey}:${delivery.recyclerId}`;
-    const existing = buckets.get(key);
-
-    if (existing) {
-      existing.outputWeightKg += Number(delivery.outputWeightKg);
-    } else {
-      buckets.set(key, {
-        monthKey,
-        recyclerId: delivery.recyclerId,
-        outputWeightKg: Number(delivery.outputWeightKg),
-      });
-    }
-  }
-
-  const sales = Array.from(buckets.values()).flatMap((bucket) => {
-    const [year, month] = bucket.monthKey.split("-").map(Number);
-    const purchaseWeightKg = round2(bucket.outputWeightKg * (0.88 + Math.random() * 0.08));
-    const pricePerKg = 2.6 + Math.random() * 1.2;
-
-    return {
-      date: addMonths(randomDateInMonth(year!, month!), randomInt(1, 2)),
-      recyclerId: bucket.recyclerId,
-      manufacturerId: pick(masters.manufacturers.map((m) => m.id)),
-      purchaseWeightKg,
-      salesPriceRm: round2(purchaseWeightKg * pricePerKg),
-    };
-  });
-
-  await insertBatches("Manufacturer sales", sales, (batch) =>
-    prisma.manufacturerSales.createMany({ data: batch }),
-  );
 }
 
 async function printSummary() {
   const [
     farmers,
     suppliers,
-    recyclers,
-    manufacturers,
+    collectors,
     sacks,
     distributions,
     returns,
     deliveries,
-    sales,
     distQty,
-    passAgg,
+    returnQty,
+    deliveryAgg,
     discountSum,
   ] = await Promise.all([
     prisma.farmer.count(),
     prisma.supplier.count(),
-    prisma.recycler.count(),
-    prisma.manufacturer.count(),
+    prisma.collector.count(),
     prisma.sackCatalog.count(),
     prisma.fertilizerDistribution.count(),
     prisma.sackReturn.count(),
-    prisma.recyclerDelivery.count(),
-    prisma.manufacturerSales.count(),
+    prisma.collectorDelivery.count(),
     prisma.fertilizerDistribution.aggregate({ _sum: { quantity: true } }),
-    prisma.sackReturn.aggregate({ _sum: { passQty: true, rejectQty: true } }),
+    prisma.sackReturn.aggregate({ _sum: { quantity: true } }),
+    prisma.collectorDelivery.aggregate({ _sum: { inputWeightKg: true, outputWeightKg: true } }),
     prisma.sackReturn.aggregate({ _sum: { totalDiscountRm: true } }),
   ]);
 
   const distributed = Number(distQty._sum.quantity ?? 0);
-  const passed = Number(passAgg._sum.passQty ?? 0);
-  const rejected = Number(passAgg._sum.rejectQty ?? 0);
-  const returnRate = distributed > 0 ? ((passed / distributed) * 100).toFixed(1) : "0";
+  const collected = Number(returnQty._sum.quantity ?? 0);
+  const returnRate = distributed > 0 ? ((collected / distributed) * 100).toFixed(1) : "0";
+  const inputKg = Number(deliveryAgg._sum.inputWeightKg ?? 0);
+  const outputKg = Number(deliveryAgg._sum.outputWeightKg ?? 0);
+  const recoveryYield = inputKg > 0 ? ((outputKg / inputKg) * 100).toFixed(1) : "0";
 
   console.log("\nSeed complete:");
-  console.log(`  Masters: ${farmers} farmers, ${suppliers} suppliers, ${recyclers} recyclers, ${manufacturers} manufacturers, ${sacks} sack types`);
-  console.log(`  Transactions: ${distributions.toLocaleString()} distributions, ${returns.toLocaleString()} returns, ${deliveries} recycler deliveries, ${sales} manufacturer sales`);
-  console.log(`  Sacks distributed: ${distributed.toLocaleString()}`);
-  console.log(`  Return rate (pass/distributed): ${returnRate}% (${passed.toLocaleString()} pass, ${rejected.toLocaleString()} reject)`);
+  console.log(`  Masters: ${farmers} farmers, ${suppliers} suppliers, ${collectors} collectors, ${sacks} sack types`);
+  console.log(`  Transactions: ${distributions.toLocaleString()} distributions, ${returns.toLocaleString()} returns, ${deliveries} collector deliveries`);
+  console.log(`  Total distributed: ${distributed.toLocaleString()} pcs`);
+  console.log(`  Total collected: ${collected.toLocaleString()} pcs (${returnRate}% collection rate)`);
+  console.log(`  Collector recovery yield: ${recoveryYield}% (${outputKg.toLocaleString()} kg out / ${inputKg.toLocaleString()} kg in)`);
   console.log(`  Total discounts: RM ${Number(discountSum._sum.totalDiscountRm ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
 }
 
 async function main() {
-  console.log("Starting comprehensive seed...\n");
+  console.log("Starting Sack2Loop seed...\n");
   const started = Date.now();
 
   await clearBusinessData();
   const masters = await seedMasters();
   const distributions = await seedDistributions(masters);
   const { returns, sackWeightMap } = await seedReturns(masters, distributions);
-  const deliveries = await seedRecyclerDeliveries(masters, returns, sackWeightMap);
-  await seedManufacturerSales(masters, deliveries);
+  await seedCollectorDeliveries(masters, returns, sackWeightMap);
   await printSummary();
 
   console.log(`\nFinished in ${((Date.now() - started) / 1000).toFixed(1)}s`);
