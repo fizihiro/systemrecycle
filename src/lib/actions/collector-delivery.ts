@@ -122,8 +122,14 @@ export async function updateCollectorDelivery(
 export async function deleteCollectorDelivery(
   id: number,
 ): Promise<ActionResult> {
-  await prisma.collectorDelivery.delete({ where: { id } });
-  revalidatePath(PATH);
-  revalidatePath("/dashboard");
-  return actionSuccess();
+  try {
+    await prisma.collectorDelivery.delete({ where: { id } });
+    revalidatePath(PATH);
+    revalidatePath("/dashboard");
+    return actionSuccess();
+  } catch {
+    return actionError(
+      "Unable to delete this collector delivery record.",
+    );
+  }
 }

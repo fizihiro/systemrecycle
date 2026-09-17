@@ -19,11 +19,9 @@ export function formatNumber(value: number | string, digits = 2) {
 }
 
 export function toInputDate(value?: Date | string | null) {
-  if (!value) {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  return new Date(value).toISOString().slice(0, 10);
+  const date = value ? new Date(value) : new Date();
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
 export function parseDecimal(value: unknown) {

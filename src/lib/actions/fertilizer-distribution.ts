@@ -133,8 +133,14 @@ export async function updateFertilizerDistribution(
 export async function deleteFertilizerDistribution(
   id: number,
 ): Promise<ActionResult> {
-  await prisma.fertilizerDistribution.delete({ where: { id } });
-  revalidatePath(PATH);
-  revalidatePath("/dashboard");
-  return actionSuccess();
+  try {
+    await prisma.fertilizerDistribution.delete({ where: { id } });
+    revalidatePath(PATH);
+    revalidatePath("/dashboard");
+    return actionSuccess();
+  } catch {
+    return actionError(
+      "Unable to delete this fertilizer distribution record.",
+    );
+  }
 }

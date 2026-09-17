@@ -135,10 +135,14 @@ export async function updateSackReturn(
 }
 
 export async function deleteSackReturn(id: number): Promise<ActionResult> {
-  await prisma.sackReturn.delete({ where: { id } });
-  revalidatePath(PATH);
-  revalidatePath("/dashboard");
-  return actionSuccess();
+  try {
+    await prisma.sackReturn.delete({ where: { id } });
+    revalidatePath(PATH);
+    revalidatePath("/dashboard");
+    return actionSuccess();
+  } catch {
+    return actionError("Unable to delete this sack return record.");
+  }
 }
 
 export async function getSuggestedDiscount(
