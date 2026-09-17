@@ -104,7 +104,7 @@ export function DashboardFarmerPerformance({
           Farmer Performance &amp; Savings Analysis
         </CardTitle>
         <CardDescription>
-          Highlights farmers at opposite ends of the return loop — and how much of
+          Highlights farmers at opposite ends of the return loop, and how much of
           their reorder could be funded by discount credits.
         </CardDescription>
       </CardHeader>
