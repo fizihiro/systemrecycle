@@ -119,7 +119,7 @@ export function AppSidebar() {
         <NavGroup label="Transactions" items={transactionItems} />
       </SidebarContent>
       <SidebarFooter className="border-sidebar-border border-t p-4">
-        <p className="text-sidebar-foreground/50 text-xs">
+        <p className="text-sidebar-foreground/80 text-xs">
           Sack2Loop · UiTM Prototype
         </p>
       </SidebarFooter>

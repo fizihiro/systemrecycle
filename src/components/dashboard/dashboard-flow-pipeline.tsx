@@ -129,7 +129,7 @@ function MetricDisplay({
         <p
           className={cn(
             "text-sm font-medium tabular-nums",
-            lightText ? "text-slate-100/90" : "text-muted-foreground",
+            lightText ? "text-slate-100/90" : "text-foreground",
           )}
         >
           {kg.toLocaleString("en-MY")} kg
@@ -242,7 +242,7 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
                   <p
                     className={cn(
                       "mt-1 text-xs leading-relaxed",
-                      step.lightText ? "text-slate-100/90" : "text-muted-foreground",
+                      step.lightText ? "text-slate-100/90" : "text-foreground",
                     )}
                   >
                     {step.sublabel}
@@ -251,7 +251,7 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
                     <p
                       className={cn(
                         "mt-2.5 text-xs font-medium",
-                        step.lightText ? "text-slate-100" : "text-teal",
+                        step.lightText ? "text-slate-100" : "text-foreground font-semibold",
                       )}
                     >
                       {detail}

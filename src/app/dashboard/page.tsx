@@ -66,13 +66,13 @@ export default async function DashboardPage() {
                 key={item.label}
                 className="rounded-xl border border-sidebar-foreground/15 bg-sidebar-foreground/10 px-3 py-2.5"
               >
-                <p className="text-sidebar-foreground/75 text-[10px] font-medium uppercase tracking-wider">
+                <p className="text-sidebar-foreground/90 text-xs font-medium uppercase tracking-wider">
                   {item.label}
                 </p>
                 <p className="font-heading mt-1 text-lg font-bold text-sidebar-foreground">
                   {item.value}
                 </p>
-                <p className="text-sidebar-foreground/65 text-[10px]">{item.sub}</p>
+                <p className="text-sidebar-foreground/80 text-xs">{item.sub}</p>
               </div>
             ))}
           </div>
