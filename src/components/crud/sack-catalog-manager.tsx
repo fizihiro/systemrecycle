@@ -177,7 +177,7 @@ export function SackCatalogManager({
                   <TableCell>{item.sizeKg}</TableCell>
                   <TableCell>{formatCurrency(item.discountValueRm)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton
                         label={item.label}
                         onClick={() => openEdit(item)}

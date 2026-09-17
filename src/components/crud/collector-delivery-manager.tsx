@@ -159,7 +159,7 @@ export function CollectorDeliveryManager({
                   <TableCell>{formatNumber(item.inputWeightKg)} kg</TableCell>
                   <TableCell>{formatNumber(item.outputWeightKg)} kg</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton
                         label={`delivery ${item.id}`}
                         onClick={() => openEdit(item)}

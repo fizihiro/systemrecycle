@@ -197,7 +197,7 @@ export function SackReturnsManager({
                   <TableCell className="font-medium">{item.quantity.toLocaleString()} pcs</TableCell>
                   <TableCell>{formatCurrency(item.totalDiscountRm)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton
                         label={`sack return ${item.id}`}
                         onClick={() => openEdit(item)}

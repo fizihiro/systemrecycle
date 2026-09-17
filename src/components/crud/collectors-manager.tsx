@@ -123,7 +123,7 @@ export function CollectorsManager({
                   <TableCell>{formatNumber(item.processCapacityKg)} kg</TableCell>
                   <TableCell>{item.phone}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton
                         label={item.companyName}
                         onClick={() => {

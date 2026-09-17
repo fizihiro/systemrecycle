@@ -176,7 +176,7 @@ export function FertilizerDistributionManager({
                   <TableCell className="max-w-xs">{item.sackLabel}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton
                         label={`distribution ${item.id}`}
                         onClick={() => openEdit(item)}

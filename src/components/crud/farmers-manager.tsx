@@ -129,7 +129,7 @@ export function FarmersManager({
                   <TableCell>{item.phone}</TableCell>
                   <TableCell className="max-w-xs truncate">{item.address}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton label={item.name} onClick={() => openEdit(item)} />
                       <DeleteRecordButton
                         itemLabel={item.name}

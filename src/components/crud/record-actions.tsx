@@ -44,7 +44,7 @@ export function DeleteRecordButton({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label={`Delete ${itemLabel}`}>
+          <Button variant="ghost" size="icon" className="size-11" aria-label={`Delete ${itemLabel}`}>
             <Trash2 className="text-destructive" />
           </Button>
         }
@@ -76,7 +76,7 @@ export function EditRecordButton({
   onClick: () => void;
 }) {
   return (
-    <Button variant="ghost" size="icon-sm" aria-label={`Edit ${label}`} onClick={onClick}>
+    <Button variant="ghost" size="icon" className="size-11" aria-label={`Edit ${label}`} onClick={onClick}>
       <Pencil />
     </Button>
   );

@@ -122,7 +122,7 @@ export function SuppliersManager({
                   <TableCell>{item.location}</TableCell>
                   <TableCell>{item.phone}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-4">
                       <EditRecordButton
                         label={item.companyName}
                         onClick={() => {
