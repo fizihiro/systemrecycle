@@ -55,7 +55,7 @@ const pipelineSteps = [
   {
     key: "collector",
     stage: 3,
-    label: "Collector Processing",
+    label: "Recycler & Manufacturer",
     sublabel: "Recycling & reproduction",
     icon: Recycle,
     flowColor: "bg-flow-3",
@@ -280,7 +280,7 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-flow-3 size-2.5 rounded-full" />
-            Collector Processing &amp; Reproduction
+            Recycling &amp; Manufacturing
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-gold size-2.5 rounded-full" />
