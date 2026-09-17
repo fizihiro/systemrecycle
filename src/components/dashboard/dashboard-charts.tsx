@@ -203,11 +203,7 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
                   dataKey="stage"
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={10}
-                  interval={0}
-                  angle={-8}
-                  textAnchor="end"
-                  height={56}
+                  tickMargin={8}
                 />
                 <YAxis tickLine={false} axisLine={false} width={56} />
                 <ChartTooltip
@@ -298,7 +294,10 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
                   dataKey="sackType"
                   tickLine={false}
                   axisLine={false}
-                  width={168}
+                  width={100}
+                  tickFormatter={(value) =>
+                    value.length > 15 ? value.substring(0, 15) + "..." : value
+                  }
                 />
                 <ChartTooltip
                   content={({ active, payload, label }) => {
@@ -376,11 +375,7 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
                   dataKey="name"
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={10}
-                  interval={0}
-                  angle={-12}
-                  textAnchor="end"
-                  height={64}
+                  tickMargin={8}
                 />
                 <YAxis tickLine={false} axisLine={false} width={48} />
                 <ChartTooltip content={<ChartTooltipContent />} />
