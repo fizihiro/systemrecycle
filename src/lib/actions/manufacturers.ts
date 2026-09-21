@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { prisma } from "@/lib/db";
 import {
   actionError,
   actionSuccess,
@@ -19,73 +20,43 @@ import { manufacturerSchema } from "@/lib/validations";
 
 const PATH = "/dashboard/manufacturers";
 
-export type ManufacturerRecord = {
+function serialize(item: {
   id: number;
   companyName: string;
   phone: string;
-  createdAt: string;
-  updatedAt: string;
-};
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: item.id,
+    companyName: item.companyName,
+    phone: item.phone,
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+}
 
-// In-memory persistent store initialized with realistic manufacturer records
-const initialManufacturers: ManufacturerRecord[] = [
-  {
-    id: 1,
-    companyName: "Malayan Plastic Manufacturing Sdn Bhd",
-    phone: "03-89451122",
-    createdAt: new Date("2025-08-01").toISOString(),
-    updatedAt: new Date("2025-08-01").toISOString(),
-  },
-  {
-    id: 2,
-    companyName: "TopPolymer Industries Bhd",
-    phone: "07-5566778",
-    createdAt: new Date("2025-08-05").toISOString(),
-    updatedAt: new Date("2025-08-05").toISOString(),
-  },
-  {
-    id: 3,
-    companyName: "Sinaran Moulding & Extrusion",
-    phone: "04-3908822",
-    createdAt: new Date("2025-08-10").toISOString(),
-    updatedAt: new Date("2025-08-10").toISOString(),
-  },
-  {
-    id: 4,
-    companyName: "BioLoop Industrial Products",
-    phone: "03-51239900",
-    createdAt: new Date("2025-08-15").toISOString(),
-    updatedAt: new Date("2025-08-15").toISOString(),
-  },
-  {
-    id: 5,
-    companyName: "GreenTek Compounders Sdn Bhd",
-    phone: "03-78452200",
-    createdAt: new Date("2025-08-20").toISOString(),
-    updatedAt: new Date("2025-08-20").toISOString(),
-  },
-];
-
-const store = {
-  manufacturers: [...initialManufacturers],
-  nextId: 6,
-};
+export type ManufacturerRecord = ReturnType<typeof serialize>;
 
 export async function getManufacturers(
   page?: string | number,
 ): Promise<PaginatedResult<ManufacturerRecord>> {
-  const total = store.manufacturers.length;
+  const total = await prisma.manufacturer.count();
   const pagination = buildPaginationMeta(total, resolvePage(page));
-  const skip = getSkip(pagination.page);
-  const items = store.manufacturers.slice(skip, skip + PAGE_SIZE);
+  const items = await prisma.manufacturer.findMany({
+    orderBy: { id: "desc" },
+    skip: getSkip(pagination.page),
+    take: PAGE_SIZE,
+  });
 
-  return paginated(items, pagination);
+  return paginated(items.map(serialize), pagination);
 }
 
 export async function getManufacturerOptions() {
-  return store.manufacturers
-    .map((m) => ({ id: m.id, companyName: m.companyName }))
-    .sort((a, b) => a.companyName.localeCompare(b.companyName));
+  return prisma.manufacturer.findMany({
+    orderBy: { companyName: "asc" },
+    select: { id: true, companyName: true },
+  });
 }
 
 function parseInput(formData: FormData) {
@@ -103,16 +74,7 @@ export async function createManufacturer(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  const now = new Date().toISOString();
-  const newManufacturer: ManufacturerRecord = {
-    id: store.nextId++,
-    companyName: parsed.data.companyName,
-    phone: parsed.data.phone,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  store.manufacturers.unshift(newManufacturer);
+  await prisma.manufacturer.create({ data: parsed.data });
   revalidatePath(PATH);
   return actionSuccess();
 }
@@ -126,30 +88,22 @@ export async function updateManufacturer(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  const index = store.manufacturers.findIndex((m) => m.id === id);
-  if (index === -1) {
-    return actionError("Manufacturer not found");
-  }
-
-  const existing = store.manufacturers[index]!;
-  store.manufacturers[index] = {
-    ...existing,
-    companyName: parsed.data.companyName,
-    phone: parsed.data.phone,
-    updatedAt: new Date().toISOString(),
-  };
-
+  await prisma.manufacturer.update({
+    where: { id },
+    data: parsed.data,
+  });
   revalidatePath(PATH);
   return actionSuccess();
 }
 
 export async function deleteManufacturer(id: number): Promise<ActionResult> {
-  const index = store.manufacturers.findIndex((m) => m.id === id);
-  if (index === -1) {
-    return actionError("Manufacturer not found");
+  try {
+    await prisma.manufacturer.delete({ where: { id } });
+    revalidatePath(PATH);
+    return actionSuccess();
+  } catch {
+    return actionError(
+      "Unable to delete this manufacturer because they are linked to sales records.",
+    );
   }
-
-  store.manufacturers.splice(index, 1);
-  revalidatePath(PATH);
-  return actionSuccess();
 }

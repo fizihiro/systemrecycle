@@ -46,11 +46,25 @@ model Collector {
   phone             String
 
   collectorDeliveries CollectorDelivery[]
+  manufacturerSales   ManufacturerSales[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("collector")
+}
+
+model Manufacturer {
+  id          Int    @id @default(autoincrement())
+  companyName String @map("company_name")
+  phone       String
+
+  manufacturerSales ManufacturerSales[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("manufacturer")
 }
 
 model SackCatalog {
@@ -133,6 +147,26 @@ model CollectorDelivery {
   @@index([supplierId])
   @@index([collectorId])
   @@map("collector_delivery")
+}
+
+model ManufacturerSales {
+  id               Int      @id @default(autoincrement())
+  date             DateTime @db.Date
+  recyclerId       Int      @map("recycler_id")
+  manufacturerId   Int      @map("manufacturer_id")
+  purchaseWeightKg Decimal  @map("purchase_weight_kg") @db.Decimal(12, 2)
+  salesPriceRm     Decimal  @map("sales_price_rm") @db.Decimal(12, 2)
+
+  recycler     Collector    @relation(fields: [recyclerId], references: [id])
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([recyclerId])
+  @@index([manufacturerId])
+  @@map("manufacturer_sales")
 }
 
 // ─── Auth Tables (better-auth) ───────────────────────────────

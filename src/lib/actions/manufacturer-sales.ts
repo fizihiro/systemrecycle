@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { prisma } from "@/lib/db";
 import {
   actionError,
   actionSuccess,
@@ -16,107 +17,53 @@ import {
   type PaginatedResult,
 } from "@/lib/pagination";
 import { manufacturerSalesSchema } from "@/lib/validations";
-import { getCollectorOptions } from "@/lib/actions/collectors";
-import { getManufacturerOptions } from "@/lib/actions/manufacturers";
 
 const PATH = "/dashboard/manufacturer-sales";
 
-export type ManufacturerSalesRecord = {
+function serialize(item: {
   id: number;
-  date: string;
-  recyclerId: number;
-  recyclerName: string;
-  manufacturerId: number;
-  manufacturerName: string;
-  purchaseWeightKg: number;
-  salesPriceRm: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type StoredSale = {
-  id: number;
-  date: string;
+  date: Date;
   recyclerId: number;
   manufacturerId: number;
-  purchaseWeightKg: number;
-  salesPriceRm: number;
-  createdAt: string;
-  updatedAt: string;
-};
+  purchaseWeightKg: { toString(): string } | number;
+  salesPriceRm: { toString(): string } | number;
+  recycler: { companyName: string };
+  manufacturer: { companyName: string };
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: item.id,
+    date: item.date.toISOString(),
+    recyclerId: item.recyclerId,
+    recyclerName: item.recycler.companyName,
+    manufacturerId: item.manufacturerId,
+    manufacturerName: item.manufacturer.companyName,
+    purchaseWeightKg: Number(item.purchaseWeightKg),
+    salesPriceRm: Number(item.salesPriceRm),
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+}
 
-const initialSales: StoredSale[] = [
-  {
-    id: 1,
-    date: "2026-02-15",
-    recyclerId: 1,
-    manufacturerId: 1,
-    purchaseWeightKg: 4500.0,
-    salesPriceRm: 11250.0,
-    createdAt: new Date("2026-02-15").toISOString(),
-    updatedAt: new Date("2026-02-15").toISOString(),
-  },
-  {
-    id: 2,
-    date: "2026-02-28",
-    recyclerId: 2,
-    manufacturerId: 2,
-    purchaseWeightKg: 3800.0,
-    salesPriceRm: 9500.0,
-    createdAt: new Date("2026-02-28").toISOString(),
-    updatedAt: new Date("2026-02-28").toISOString(),
-  },
-  {
-    id: 3,
-    date: "2026-03-10",
-    recyclerId: 3,
-    manufacturerId: 3,
-    purchaseWeightKg: 5200.0,
-    salesPriceRm: 13000.0,
-    createdAt: new Date("2026-03-10").toISOString(),
-    updatedAt: new Date("2026-03-10").toISOString(),
-  },
-  {
-    id: 4,
-    date: "2026-03-15",
-    recyclerId: 1,
-    manufacturerId: 4,
-    purchaseWeightKg: 2900.0,
-    salesPriceRm: 7250.0,
-    createdAt: new Date("2026-03-15").toISOString(),
-    updatedAt: new Date("2026-03-15").toISOString(),
-  },
-];
-
-const store = {
-  sales: [...initialSales],
-  nextId: 5,
-};
+export type ManufacturerSalesRecord = ReturnType<typeof serialize>;
 
 export async function getManufacturerSales(
   page?: string | number,
 ): Promise<PaginatedResult<ManufacturerSalesRecord>> {
-  const [recyclers, manufacturers] = await Promise.all([
-    getCollectorOptions(),
-    getManufacturerOptions(),
-  ]);
-
-  const recyclerMap = new Map(recyclers.map((r) => [r.id, r.companyName]));
-  const manufacturerMap = new Map(manufacturers.map((m) => [m.id, m.companyName]));
-
-  const total = store.sales.length;
+  const total = await prisma.manufacturerSales.count();
   const pagination = buildPaginationMeta(total, resolvePage(page));
-  const skip = getSkip(pagination.page);
+  const items = await prisma.manufacturerSales.findMany({
+    orderBy: [{ date: "desc" }, { id: "desc" }],
+    skip: getSkip(pagination.page),
+    take: PAGE_SIZE,
+    include: {
+      recycler: { select: { companyName: true } },
+      manufacturer: { select: { companyName: true } },
+    },
+  });
 
-  const enriched: ManufacturerSalesRecord[] = store.sales
-    .slice(skip, skip + PAGE_SIZE)
-    .map((sale) => ({
-      ...sale,
-      recyclerName: recyclerMap.get(sale.recyclerId) ?? `Recycler #${sale.recyclerId}`,
-      manufacturerName: manufacturerMap.get(sale.manufacturerId) ?? `Manufacturer #${sale.manufacturerId}`,
-    }));
-
-  return paginated(enriched, pagination);
+  return paginated(items.map(serialize), pagination);
 }
 
 function parseInput(formData: FormData) {
@@ -137,20 +84,14 @@ export async function createManufacturerSales(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  const now = new Date().toISOString();
-  const newSale: StoredSale = {
-    id: store.nextId++,
-    date: parsed.data.date,
-    recyclerId: parsed.data.recyclerId,
-    manufacturerId: parsed.data.manufacturerId,
-    purchaseWeightKg: parsed.data.purchaseWeightKg,
-    salesPriceRm: parsed.data.salesPriceRm,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  store.sales.unshift(newSale);
+  await prisma.manufacturerSales.create({
+    data: {
+      ...parsed.data,
+      date: new Date(parsed.data.date),
+    },
+  });
   revalidatePath(PATH);
+  revalidatePath("/dashboard");
   return actionSuccess();
 }
 
@@ -163,33 +104,25 @@ export async function updateManufacturerSales(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  const index = store.sales.findIndex((s) => s.id === id);
-  if (index === -1) {
-    return actionError("Sale record not found");
-  }
-
-  const existing = store.sales[index]!;
-  store.sales[index] = {
-    ...existing,
-    date: parsed.data.date,
-    recyclerId: parsed.data.recyclerId,
-    manufacturerId: parsed.data.manufacturerId,
-    purchaseWeightKg: parsed.data.purchaseWeightKg,
-    salesPriceRm: parsed.data.salesPriceRm,
-    updatedAt: new Date().toISOString(),
-  };
-
+  await prisma.manufacturerSales.update({
+    where: { id },
+    data: {
+      ...parsed.data,
+      date: new Date(parsed.data.date),
+    },
+  });
   revalidatePath(PATH);
+  revalidatePath("/dashboard");
   return actionSuccess();
 }
 
 export async function deleteManufacturerSales(id: number): Promise<ActionResult> {
-  const index = store.sales.findIndex((s) => s.id === id);
-  if (index === -1) {
-    return actionError("Sale record not found");
+  try {
+    await prisma.manufacturerSales.delete({ where: { id } });
+    revalidatePath(PATH);
+    revalidatePath("/dashboard");
+    return actionSuccess();
+  } catch {
+    return actionError("Unable to delete this manufacturer sale record.");
   }
-
-  store.sales.splice(index, 1);
-  revalidatePath(PATH);
-  return actionSuccess();
 }

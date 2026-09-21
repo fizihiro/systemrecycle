@@ -84,6 +84,14 @@ const COLLECTORS = [
   { companyName: "Sustainable Sack Processing Hub", processCapacityKg: 310000, phone: "05-6677889" },
 ];
 
+const MANUFACTURERS = [
+  { companyName: "Malayan Plastic Manufacturing Sdn Bhd", phone: "03-89451122" },
+  { companyName: "TopPolymer Industries Bhd", phone: "07-5566778" },
+  { companyName: "Sinaran Moulding & Extrusion", phone: "04-3908822" },
+  { companyName: "BioLoop Industrial Products", phone: "03-51239900" },
+  { companyName: "GreenTek Compounders Sdn Bhd", phone: "03-78452200" },
+];
+
 const FARMER_FIRST = [
   "Ahmad", "Siti", "Ravi", "Lim", "Fatimah", "Hassan", "Mei Ling", "Kumar",
   "Nurul", "Zulkifli", "Tan", "Priya", "Azman", "Wong", "Faridah", "Raj",
@@ -167,6 +175,7 @@ async function insertBatches<T>(
 
 async function clearBusinessData() {
   console.log("Clearing existing business data...");
+  await prisma.manufacturerSales.deleteMany();
   await prisma.collectorDelivery.deleteMany();
   await prisma.sackReturn.deleteMany();
   await prisma.fertilizerDistribution.deleteMany();
@@ -174,6 +183,7 @@ async function clearBusinessData() {
   await prisma.farmer.deleteMany();
   await prisma.supplier.deleteMany();
   await prisma.collector.deleteMany();
+  await prisma.manufacturer.deleteMany();
 }
 
 async function seedMasters() {
@@ -209,6 +219,17 @@ async function seedMasters() {
     ),
   );
 
+  const manufacturers = await Promise.all(
+    MANUFACTURERS.map((manufacturer) =>
+      prisma.manufacturer.create({
+        data: {
+          companyName: manufacturer.companyName,
+          phone: manufacturer.phone,
+        },
+      }),
+    ),
+  );
+
   const farmers = await Promise.all(
     Array.from({ length: 35 }, (_, index) => {
       const first = FARMER_FIRST[index % FARMER_FIRST.length]!;
@@ -223,7 +244,7 @@ async function seedMasters() {
     }),
   );
 
-  return { sacks, suppliers, collectors, farmers };
+  return { sacks, suppliers, collectors, farmers, manufacturers };
 }
 
 type DistributionRow = {
@@ -398,31 +419,80 @@ async function seedCollectorDeliveries(
   return deliveries;
 }
 
+async function seedManufacturerSales(
+  masters: Awaited<ReturnType<typeof seedMasters>>,
+) {
+  console.log("Seeding manufacturer sales...");
+
+  const collectorIds = masters.collectors.map((c) => c.id);
+  const manufacturerIds = masters.manufacturers.map((m) => m.id);
+
+  const initialSales = [
+    {
+      date: new Date("2026-02-15"),
+      recyclerId: collectorIds[0] ?? 1,
+      manufacturerId: manufacturerIds[0] ?? 1,
+      purchaseWeightKg: 4500.0,
+      salesPriceRm: 11250.0,
+    },
+    {
+      date: new Date("2026-02-28"),
+      recyclerId: collectorIds[1] ?? 2,
+      manufacturerId: manufacturerIds[1] ?? 2,
+      purchaseWeightKg: 3800.0,
+      salesPriceRm: 9500.0,
+    },
+    {
+      date: new Date("2026-03-10"),
+      recyclerId: collectorIds[2] ?? 3,
+      manufacturerId: manufacturerIds[2] ?? 3,
+      purchaseWeightKg: 5200.0,
+      salesPriceRm: 13000.0,
+    },
+    {
+      date: new Date("2026-03-15"),
+      recyclerId: collectorIds[0] ?? 1,
+      manufacturerId: manufacturerIds[3] ?? 4,
+      purchaseWeightKg: 2900.0,
+      salesPriceRm: 7250.0,
+    },
+  ];
+
+  await prisma.manufacturerSales.createMany({ data: initialSales });
+  return initialSales;
+}
+
 async function printSummary() {
   const [
     farmers,
     suppliers,
     collectors,
+    manufacturers,
     sacks,
     distributions,
     returns,
     deliveries,
+    sales,
     distQty,
     returnQty,
     deliveryAgg,
     discountSum,
+    salesAgg,
   ] = await Promise.all([
     prisma.farmer.count(),
     prisma.supplier.count(),
     prisma.collector.count(),
+    prisma.manufacturer.count(),
     prisma.sackCatalog.count(),
     prisma.fertilizerDistribution.count(),
     prisma.sackReturn.count(),
     prisma.collectorDelivery.count(),
+    prisma.manufacturerSales.count(),
     prisma.fertilizerDistribution.aggregate({ _sum: { quantity: true } }),
     prisma.sackReturn.aggregate({ _sum: { quantity: true } }),
     prisma.collectorDelivery.aggregate({ _sum: { inputWeightKg: true, outputWeightKg: true } }),
     prisma.sackReturn.aggregate({ _sum: { totalDiscountRm: true } }),
+    prisma.manufacturerSales.aggregate({ _sum: { purchaseWeightKg: true, salesPriceRm: true } }),
   ]);
 
   const distributed = Number(distQty._sum.quantity ?? 0);
@@ -431,14 +501,17 @@ async function printSummary() {
   const inputKg = Number(deliveryAgg._sum.inputWeightKg ?? 0);
   const outputKg = Number(deliveryAgg._sum.outputWeightKg ?? 0);
   const recoveryYield = inputKg > 0 ? ((outputKg / inputKg) * 100).toFixed(1) : "0";
+  const salesWeightKg = Number(salesAgg._sum.purchaseWeightKg ?? 0);
+  const salesPriceTotal = Number(salesAgg._sum.salesPriceRm ?? 0);
 
   console.log("\nSeed complete:");
-  console.log(`  Masters: ${farmers} farmers, ${suppliers} suppliers, ${collectors} collectors, ${sacks} sack types`);
-  console.log(`  Transactions: ${distributions.toLocaleString()} distributions, ${returns.toLocaleString()} returns, ${deliveries} collector deliveries`);
+  console.log(`  Masters: ${farmers} farmers, ${suppliers} suppliers, ${collectors} collectors, ${manufacturers} manufacturers, ${sacks} sack types`);
+  console.log(`  Transactions: ${distributions.toLocaleString()} distributions, ${returns.toLocaleString()} returns, ${deliveries} collector deliveries, ${sales} manufacturer sales`);
   console.log(`  Total distributed: ${distributed.toLocaleString()} pcs`);
   console.log(`  Total collected: ${collected.toLocaleString()} pcs (${returnRate}% collection rate)`);
   console.log(`  Collector recovery yield: ${recoveryYield}% (${outputKg.toLocaleString()} kg out / ${inputKg.toLocaleString()} kg in)`);
   console.log(`  Total discounts: RM ${Number(discountSum._sum.totalDiscountRm ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+  console.log(`  Total manufacturer sales: ${salesWeightKg.toLocaleString()} kg / RM ${salesPriceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
 }
 
 async function main() {
@@ -450,6 +523,7 @@ async function main() {
   const distributions = await seedDistributions(masters);
   const { returns, sackWeightMap } = await seedReturns(masters, distributions);
   await seedCollectorDeliveries(masters, returns, sackWeightMap);
+  await seedManufacturerSales(masters);
   await printSummary();
 
   console.log(`\nFinished in ${((Date.now() - started) / 1000).toFixed(1)}s`);
