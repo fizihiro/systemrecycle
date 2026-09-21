@@ -49,6 +49,11 @@ export const collectorSchema = z.object({
   phone: requiredString,
 });
 
+export const manufacturerSchema = z.object({
+  companyName: requiredString,
+  phone: requiredString,
+});
+
 export const fertilizerDistributionSchema = z.object({
   date: requiredString,
   supplierId: positiveInt,
@@ -75,12 +80,22 @@ export const collectorDeliverySchema = z.object({
   outputWeightKg: nonNegativeDecimal,
 });
 
+export const manufacturerSalesSchema = z.object({
+  date: requiredString,
+  recyclerId: positiveInt,
+  manufacturerId: positiveInt,
+  purchaseWeightKg: positiveDecimal,
+  salesPriceRm: nonNegativeDecimal,
+});
+
 export type SackCatalogInput = z.infer<typeof sackCatalogSchema>;
 export type FarmerInput = z.infer<typeof farmerSchema>;
 export type SupplierInput = z.infer<typeof supplierSchema>;
 export type CollectorInput = z.infer<typeof collectorSchema>;
+export type ManufacturerInput = z.infer<typeof manufacturerSchema>;
 export type FertilizerDistributionInput = z.infer<
   typeof fertilizerDistributionSchema
 >;
 export type SackReturnInput = z.infer<typeof sackReturnSchema>;
 export type CollectorDeliveryInput = z.infer<typeof collectorDeliverySchema>;
+export type ManufacturerSalesInput = z.infer<typeof manufacturerSalesSchema>;

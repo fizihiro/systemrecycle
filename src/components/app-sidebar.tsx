@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  Factory,
   LayoutDashboard,
   Leaf,
   Package,
   Recycle,
   RotateCcw,
+  ShoppingCart,
   Truck,
   Users,
 } from "lucide-react";
@@ -37,7 +39,12 @@ const overviewItems = [
 const masterItems = [
   { title: "Farmers", href: "/dashboard/farmers", icon: Users },
   { title: "Suppliers", href: "/dashboard/suppliers", icon: Truck },
-  { title: "Collectors", href: "/dashboard/collectors", icon: Recycle },
+  { title: "Recyclers", href: "/dashboard/recyclers", icon: Recycle },
+  {
+    title: "Manufacturers",
+    href: "/dashboard/manufacturers",
+    icon: Factory,
+  },
   {
     title: "Sack Catalog",
     href: "/dashboard/sack-catalog",
@@ -57,9 +64,14 @@ const transactionItems = [
     icon: RotateCcw,
   },
   {
-    title: "Collector Delivery",
-    href: "/dashboard/collector-delivery",
+    title: "Recycler Delivery",
+    href: "/dashboard/recycler-delivery",
     icon: Building2,
+  },
+  {
+    title: "Manufacturer Sales",
+    href: "/dashboard/manufacturer-sales",
+    icon: ShoppingCart,
   },
 ];
 

@@ -66,8 +66,8 @@ const pipelineSteps = [
     dualUnits: true,
     getMetrics: (data: DashboardAnalytics["kpis"]) => ({
       pcs: data.sacksToCollector,
-      kg: data.totalInputWeightKg,
-      detail: `${data.totalOutputWeightFormatted} output · ${data.recoveryYieldPct}% yield`,
+      kg: data.sacksToCollector * 0.1,
+      detail: `${(data.sacksToCollector * 0.1 * (data.recoveryYieldPct / 100)).toFixed(2)} kg output · ${data.recoveryYieldPct}% yield`,
     }),
   },
 ] as const;
