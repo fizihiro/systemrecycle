@@ -49,8 +49,8 @@ export function CollectorDeliveryManager({
   pagination,
   suppliers,
   collectors,
-  title = "Recycler Delivery",
-  description = "Record deliveries of collected sacks from suppliers to recyclers for processing into recycled PP.",
+  title = "Recycler Delivery & Receipts",
+  description = "Record accepted deliveries of collected sacks from collectors and suppliers for processing into recycled PP.",
 }: {
   items: CollectorDeliveryRecord[];
   pagination: PaginationMeta;
@@ -95,6 +95,21 @@ export function CollectorDeliveryManager({
 
   function handleSubmit(formData: FormData) {
     setError(null);
+
+    const colId = formData.get("collectorId");
+    if (!colId || String(colId).trim() === "") {
+      setError("Selecting a Collector is mandatory.");
+      return;
+    }
+
+    const inputWeightKg = Number(formData.get("inputWeightKg"));
+    const outputWeightKg = Number(formData.get("outputWeightKg"));
+
+    if (outputWeightKg > inputWeightKg) {
+      setError("Strict validation failed: Recycled output weight cannot exceed accepted input weight.");
+      return;
+    }
+
     startTransition(async () => {
       const result = editing
         ? await updateCollectorDelivery(editing.id, formData)
@@ -125,19 +140,19 @@ export function CollectorDeliveryManager({
             disabled={suppliers.length === 0 || collectors.length === 0}
           >
             <Plus />
-            Add Delivery
+            Record Receipt
           </Button>
         }
       />
 
       {(suppliers.length === 0 || collectors.length === 0) && (
-        <EmptyState message="Add at least one supplier and collector before recording deliveries." />
+        <EmptyState message="Add at least one supplier and collector before recording receipts." />
       )}
 
       {pagination.total === 0 ? (
         suppliers.length > 0 &&
         collectors.length > 0 && (
-          <EmptyState message="No collector deliveries recorded yet." />
+          <EmptyState message="No recycler receipts recorded yet." />
         )
       ) : (
         <DataTable pagination={pagination}>
@@ -184,7 +199,9 @@ export function CollectorDeliveryManager({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Delivery" : "Add Delivery"}</DialogTitle>
+            <DialogTitle>
+              {editing ? "Edit Recycler Receipt" : "Record Recycler Receipt"}
+            </DialogTitle>
           </DialogHeader>
           <form key={dialogKey} action={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -198,6 +215,19 @@ export function CollectorDeliveryManager({
               />
             </div>
             <FormSelect
+              id="collectorId"
+              name="collectorId"
+              label="Collector (Mandatory)"
+              value={collectorId}
+              onValueChange={setCollectorId}
+              placeholder="Select collector"
+              options={collectors.map((item) => ({
+                value: String(item.id),
+                label: item.label,
+              }))}
+              required
+            />
+            <FormSelect
               id="supplierId"
               name="supplierId"
               label="Supplier"
@@ -205,18 +235,6 @@ export function CollectorDeliveryManager({
               onValueChange={setSupplierId}
               placeholder="Select supplier"
               options={suppliers.map((item) => ({
-                value: String(item.id),
-                label: item.label,
-              }))}
-            />
-            <FormSelect
-              id="collectorId"
-              name="collectorId"
-              label="Collector"
-              value={collectorId}
-              onValueChange={setCollectorId}
-              placeholder="Select collector"
-              options={collectors.map((item) => ({
                 value: String(item.id),
                 label: item.label,
               }))}
@@ -235,7 +253,7 @@ export function CollectorDeliveryManager({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="inputWeightKg">Input Weight (KG)</Label>
+                <Label htmlFor="inputWeightKg">Accepted Input Weight (KG)</Label>
                 <Input
                   id="inputWeightKg"
                   name="inputWeightKg"
@@ -247,7 +265,7 @@ export function CollectorDeliveryManager({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="outputWeightKg">Output Weight (KG)</Label>
+                <Label htmlFor="outputWeightKg">Recycled Output Weight (KG)</Label>
                 <Input
                   id="outputWeightKg"
                   name="outputWeightKg"
@@ -257,12 +275,15 @@ export function CollectorDeliveryManager({
                   defaultValue={editing?.outputWeightKg ?? ""}
                   required
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Must be ≤ Accepted Input Weight
+                </p>
               </div>
             </div>
             <FormError message={error} />
             <DialogFooter>
               <SubmitButton
-                label={editing ? "Save Changes" : "Create Delivery"}
+                label={editing ? "Save Changes" : "Save Receipt"}
                 pending={isPending}
               />
             </DialogFooter>

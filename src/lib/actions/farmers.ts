@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { getCurrentProgramId } from "@/lib/tenant";
 import {
   actionError,
   actionSuccess,
@@ -43,9 +44,11 @@ export type FarmerRecord = ReturnType<typeof serialize>;
 export async function getFarmers(
   page?: string | number,
 ): Promise<PaginatedResult<FarmerRecord>> {
-  const total = await prisma.farmer.count();
+  const programId = await getCurrentProgramId();
+  const total = await prisma.farmer.count({ where: { programId } });
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.farmer.findMany({
+    where: { programId },
     orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -55,7 +58,9 @@ export async function getFarmers(
 }
 
 export async function getFarmerOptions() {
+  const programId = await getCurrentProgramId();
   return prisma.farmer.findMany({
+    where: { programId },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
@@ -75,7 +80,13 @@ export async function createFarmer(formData: FormData): Promise<ActionResult> {
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.farmer.create({ data: parsed.data });
+  const programId = await getCurrentProgramId();
+  await prisma.farmer.create({
+    data: {
+      ...parsed.data,
+      programId,
+    },
+  });
   revalidatePath(PATH);
   return actionSuccess();
 }

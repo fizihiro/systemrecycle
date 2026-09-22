@@ -14,9 +14,12 @@ const requiredString = z.string().trim().min(1, "This field is required");
 
 export const sackCatalogSchema = z
   .object({
+    brand: z.string().trim().optional(),
+    dimensions: z.string().trim().optional(),
     productCategory: z.enum(PRODUCT_CATEGORIES),
     materialType: z.enum(MATERIAL_TYPES),
     sizeKg: positiveInt,
+    emptySackWeightG: positiveDecimal.default(80),
     discountValueRm: nonNegativeDecimal,
   })
   .superRefine((data, ctx) => {
@@ -64,21 +67,31 @@ export const fertilizerDistributionSchema = z.object({
 
 export const sackReturnSchema = z.object({
   date: requiredString,
+  batchId: requiredString,
   farmerId: positiveInt,
-  supplierId: positiveInt,
+  supplierId: positiveInt.optional(),
+  collectorId: positiveInt.optional(),
   sackId: positiveInt,
   quantity: positiveInt,
   totalDiscountRm: nonNegativeDecimal,
+}).refine((data) => Boolean(data.collectorId || data.supplierId), {
+  message: "Collector is required",
+  path: ["collectorId"],
 });
 
-export const collectorDeliverySchema = z.object({
-  date: requiredString,
-  supplierId: positiveInt,
-  collectorId: positiveInt,
-  sackQty: positiveInt,
-  inputWeightKg: positiveDecimal,
-  outputWeightKg: nonNegativeDecimal,
-});
+export const collectorDeliverySchema = z
+  .object({
+    date: requiredString,
+    supplierId: positiveInt,
+    collectorId: positiveInt,
+    sackQty: positiveInt,
+    inputWeightKg: positiveDecimal,
+    outputWeightKg: nonNegativeDecimal,
+  })
+  .refine((data) => data.outputWeightKg <= data.inputWeightKg, {
+    message: "Recycled output weight cannot exceed accepted input weight",
+    path: ["outputWeightKg"],
+  });
 
 export const manufacturerSalesSchema = z.object({
   date: requiredString,

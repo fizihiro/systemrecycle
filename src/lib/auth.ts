@@ -17,6 +17,23 @@ export const auth = betterAuth({
         defaultValue: "admin",
         required: false,
       },
+      programId: {
+        type: "string",
+        defaultValue: "prog_sack2loop_demo",
+        required: false,
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const role = (user as { role?: string }).role?.toLowerCase();
+          if (role === "collector" || role === "farmer") {
+            throw new Error("Collectors and Farmers are not permitted login accounts.");
+          }
+        },
+      },
     },
   },
 });

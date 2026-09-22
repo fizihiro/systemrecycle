@@ -3,6 +3,7 @@ export const PRODUCT_CATEGORIES = ["Fertiliser", "Animal Feed"] as const;
 export const MATERIAL_TYPES = [
   "Plain / non-laminated woven PP",
   "Laminated/coated woven PP",
+  "Coated/Laminated PP woven",
   "BOPP-laminated woven PP",
   "Woven PP + inner PE liner",
   "FIBC / jumbo PP bag",
@@ -17,17 +18,26 @@ export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
 
 export type SackCatalogFields = {
+  brand?: string | null;
+  dimensions?: string | null;
   productCategory: string;
   materialType: string;
   sizeKg: number;
+  emptySackWeightG?: number | { toString(): string } | null;
 };
 
 export function formatSackLabel({
+  brand,
+  dimensions,
   productCategory,
   materialType,
   sizeKg,
+  emptySackWeightG,
 }: SackCatalogFields) {
-  return `${productCategory} · ${sizeKg}kg · ${materialType}`;
+  const prefix = brand ? `${brand} · ` : "";
+  const dimStr = dimensions ? ` (${dimensions})` : "";
+  const weightStr = emptySackWeightG ? ` [${Number(emptySackWeightG)}g]` : "";
+  return `${prefix}${productCategory} ${sizeKg}kg${dimStr}${weightStr} · ${materialType}`;
 }
 
 export function formatSackShortLabel({
@@ -37,7 +47,10 @@ export function formatSackShortLabel({
   return `${productCategory} ${sizeKg}kg`;
 }
 
-export function emptySackWeightKg(sizeKg: number) {
+export function emptySackWeightKg(sizeKg: number, emptySackWeightG?: number) {
+  if (emptySackWeightG && emptySackWeightG > 0) {
+    return emptySackWeightG / 1000;
+  }
   return Math.round(sizeKg * 3.6) / 1000;
 }
 

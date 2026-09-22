@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { getCurrentProgramId } from "@/lib/tenant";
 import {
   actionError,
   actionSuccess,
@@ -31,9 +32,12 @@ function serialize(item: {
   supplier: { companyName: string };
   farmer: { name: string };
   sack: {
+    brand?: string | null;
+    dimensions?: string | null;
     productCategory: string;
     materialType: string;
     sizeKg: number;
+    emptySackWeightG?: { toString(): string } | null;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -58,9 +62,11 @@ export type FertilizerDistributionRecord = ReturnType<typeof serialize>;
 export async function getFertilizerDistributions(
   page?: string | number,
 ): Promise<PaginatedResult<FertilizerDistributionRecord>> {
-  const total = await prisma.fertilizerDistribution.count();
+  const programId = await getCurrentProgramId();
+  const total = await prisma.fertilizerDistribution.count({ where: { programId } });
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.fertilizerDistribution.findMany({
+    where: { programId },
     orderBy: [{ date: "desc" }, { id: "desc" }],
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -69,9 +75,12 @@ export async function getFertilizerDistributions(
       farmer: { select: { name: true } },
       sack: {
         select: {
+          brand: true,
+          dimensions: true,
           productCategory: true,
           materialType: true,
           sizeKg: true,
+          emptySackWeightG: true,
         },
       },
     },
@@ -98,9 +107,11 @@ export async function createFertilizerDistribution(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
+  const programId = await getCurrentProgramId();
   await prisma.fertilizerDistribution.create({
     data: {
       ...parsed.data,
+      programId,
       date: new Date(parsed.data.date),
     },
   });

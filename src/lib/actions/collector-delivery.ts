@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { getCurrentProgramId } from "@/lib/tenant";
 import {
   actionError,
   actionSuccess,
@@ -18,7 +19,8 @@ import {
 } from "@/lib/pagination";
 import { collectorDeliverySchema } from "@/lib/validations";
 
-const PATH = "/dashboard/collector-delivery";
+const PATH = "/dashboard/recycler-delivery";
+const ALT_PATH = "/dashboard/collector-delivery";
 
 function serialize(item: {
   id: number;
@@ -53,9 +55,11 @@ export type CollectorDeliveryRecord = ReturnType<typeof serialize>;
 export async function getCollectorDeliveries(
   page?: string | number,
 ): Promise<PaginatedResult<CollectorDeliveryRecord>> {
-  const total = await prisma.collectorDelivery.count();
+  const programId = await getCurrentProgramId();
+  const total = await prisma.collectorDelivery.count({ where: { programId } });
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.collectorDelivery.findMany({
+    where: { programId },
     orderBy: [{ date: "desc" }, { id: "desc" }],
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -87,13 +91,20 @@ export async function createCollectorDelivery(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
+  if (parsed.data.outputWeightKg > parsed.data.inputWeightKg) {
+    return actionError("Recycled output weight cannot exceed accepted input weight.");
+  }
+
+  const programId = await getCurrentProgramId();
   await prisma.collectorDelivery.create({
     data: {
       ...parsed.data,
+      programId,
       date: new Date(parsed.data.date),
     },
   });
   revalidatePath(PATH);
+  revalidatePath(ALT_PATH);
   revalidatePath("/dashboard");
   return actionSuccess();
 }
@@ -107,6 +118,10 @@ export async function updateCollectorDelivery(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
+  if (parsed.data.outputWeightKg > parsed.data.inputWeightKg) {
+    return actionError("Recycled output weight cannot exceed accepted input weight.");
+  }
+
   await prisma.collectorDelivery.update({
     where: { id },
     data: {
@@ -115,6 +130,7 @@ export async function updateCollectorDelivery(
     },
   });
   revalidatePath(PATH);
+  revalidatePath(ALT_PATH);
   revalidatePath("/dashboard");
   return actionSuccess();
 }
@@ -125,11 +141,12 @@ export async function deleteCollectorDelivery(
   try {
     await prisma.collectorDelivery.delete({ where: { id } });
     revalidatePath(PATH);
+    revalidatePath(ALT_PATH);
     revalidatePath("/dashboard");
     return actionSuccess();
   } catch {
     return actionError(
-      "Unable to delete this collector delivery record.",
+      "Unable to delete this delivery record.",
     );
   }
 }

@@ -2,7 +2,7 @@ import { SackReturnsManager } from "@/components/crud/sack-returns-manager";
 import { getFarmerOptions } from "@/lib/actions/farmers";
 import { getSackReturns } from "@/lib/actions/sack-returns";
 import { getSackCatalogOptions } from "@/lib/actions/sack-catalog";
-import { getSupplierOptions } from "@/lib/actions/suppliers";
+import { getCollectorOptions } from "@/lib/actions/collectors";
 
 type PageProps = {
   searchParams: Promise<{ page?: string }>;
@@ -10,9 +10,9 @@ type PageProps = {
 
 export default async function SackReturnsPage({ searchParams }: PageProps) {
   const { page } = await searchParams;
-  const [{ items, pagination }, suppliers, farmers, sacks] = await Promise.all([
+  const [{ items, pagination }, collectors, farmers, sacks] = await Promise.all([
     getSackReturns(page),
-    getSupplierOptions(),
+    getCollectorOptions(),
     getFarmerOptions(),
     getSackCatalogOptions(),
   ]);
@@ -21,7 +21,7 @@ export default async function SackReturnsPage({ searchParams }: PageProps) {
     <SackReturnsManager
       items={items}
       pagination={pagination}
-      suppliers={suppliers.map((item) => ({
+      collectors={collectors.map((item) => ({
         id: item.id,
         label: item.companyName,
       }))}

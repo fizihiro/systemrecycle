@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { getCurrentProgramId } from "@/lib/tenant";
 import {
   actionError,
   actionSuccess,
@@ -51,9 +52,11 @@ export type ManufacturerSalesRecord = ReturnType<typeof serialize>;
 export async function getManufacturerSales(
   page?: string | number,
 ): Promise<PaginatedResult<ManufacturerSalesRecord>> {
-  const total = await prisma.manufacturerSales.count();
+  const programId = await getCurrentProgramId();
+  const total = await prisma.manufacturerSales.count({ where: { programId } });
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.manufacturerSales.findMany({
+    where: { programId },
     orderBy: [{ date: "desc" }, { id: "desc" }],
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -84,9 +87,11 @@ export async function createManufacturerSales(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
+  const programId = await getCurrentProgramId();
   await prisma.manufacturerSales.create({
     data: {
       ...parsed.data,
+      programId,
       date: new Date(parsed.data.date),
     },
   });

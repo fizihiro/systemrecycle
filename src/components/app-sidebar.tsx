@@ -27,6 +27,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useSession } from "@/lib/auth-client";
 
 const overviewItems = [
   {
@@ -84,6 +85,8 @@ function NavGroup({
 }) {
   const pathname = usePathname();
 
+  if (items.length === 0) return null;
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="text-sidebar-foreground/60 text-[10px] font-semibold uppercase tracking-widest">
@@ -110,6 +113,57 @@ function NavGroup({
 }
 
 export function AppSidebar() {
+  const { data: session } = useSession();
+  const role = (
+    session?.user && "role" in session.user
+      ? String(session.user.role)
+      : "admin"
+  ).toLowerCase();
+
+  const filteredMasters = masterItems.filter((item) => {
+    if (role === "admin") return true;
+    if (role === "manufacturer") {
+      return (
+        item.href === "/dashboard/manufacturers" ||
+        item.href === "/dashboard/sack-catalog"
+      );
+    }
+    if (role === "supplier") {
+      return (
+        item.href === "/dashboard/farmers" ||
+        item.href === "/dashboard/suppliers" ||
+        item.href === "/dashboard/sack-catalog"
+      );
+    }
+    if (role === "recycler") {
+      return (
+        item.href === "/dashboard/recyclers" ||
+        item.href === "/dashboard/sack-catalog"
+      );
+    }
+    return false;
+  });
+
+  const filteredTransactions = transactionItems.filter((item) => {
+    if (role === "admin") return true;
+    if (role === "manufacturer") {
+      return item.href === "/dashboard/manufacturer-sales";
+    }
+    if (role === "supplier") {
+      return (
+        item.href === "/dashboard/fertilizer-distribution" ||
+        item.href === "/dashboard/sack-returns"
+      );
+    }
+    if (role === "recycler") {
+      return (
+        item.href === "/dashboard/recycler-delivery" ||
+        item.href === "/dashboard/manufacturer-sales"
+      );
+    }
+    return false;
+  });
+
   return (
     <Sidebar className="border-sidebar-border">
       <SidebarHeader className="border-sidebar-border border-b px-4 py-5">
@@ -127,13 +181,18 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="px-1 py-2">
         <NavGroup label="Overview" items={overviewItems} />
-        <NavGroup label="Masters" items={masterItems} />
-        <NavGroup label="Transactions" items={transactionItems} />
+        <NavGroup label="Masters" items={filteredMasters} />
+        <NavGroup label="Transactions" items={filteredTransactions} />
       </SidebarContent>
       <SidebarFooter className="border-sidebar-border border-t p-4">
-        <p className="text-sidebar-foreground/80 text-xs">
-          Sack2Loop · UiTM Prototype
-        </p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sidebar-foreground/80 text-xs font-medium">
+            Sack2Loop · Multi-Tenant
+          </p>
+          <p className="text-sidebar-foreground/60 text-[11px] capitalize">
+            Role: {role === "manufacturer" ? "PRO Manufacturer" : role}
+          </p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

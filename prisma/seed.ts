@@ -5,6 +5,12 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import type { PoolConfig } from "mariadb";
 
 const BATCH_SIZE = 5000;
+const PROGRAM_ID = "prog_sack2loop_demo";
+
+// Handover Economic Constants
+const INCENTIVE_PER_KG = 0.6; // RM 0.60 / kg
+const LOGISTICS_TRIP_COST_RM = 150.0; // RM 150 / trip
+const RPP_VALUE_PER_KG = 3.55; // RM 3.55 / kg rPP
 
 function getMariaDbConfig(): PoolConfig {
   const databaseUrl = process.env.DATABASE_URL;
@@ -27,43 +33,71 @@ const prisma = new PrismaClient({
 });
 
 const MATERIAL_TYPES = [
+  "Coated/Laminated PP woven",
   "Plain / non-laminated woven PP",
   "Laminated/coated woven PP",
   "BOPP-laminated woven PP",
   "Woven PP + inner PE liner",
-  "FIBC / jumbo PP bag",
 ] as const;
 
 function buildSackCatalogSeed() {
-  const entries: Array<{
-    productCategory: "Fertiliser" | "Animal Feed";
-    sizeKg: number;
-    materialType: (typeof MATERIAL_TYPES)[number];
-    discount: number;
-    weightKg: number;
-  }> = [];
-
-  for (const sizeKg of [20, 25, 50]) {
-    entries.push({
-      productCategory: "Animal Feed",
-      sizeKg,
-      materialType: pick([...MATERIAL_TYPES]),
-      discount: Math.round(sizeKg * 0.05 * 100) / 100,
-      weightKg: Math.round(sizeKg * 3.6) / 1000,
-    });
-  }
-
-  for (const sizeKg of [25, 40, 50]) {
-    entries.push({
-      productCategory: "Fertiliser",
-      sizeKg,
-      materialType: pick([...MATERIAL_TYPES]),
-      discount: Math.round(sizeKg * 0.05 * 100) / 100,
-      weightKg: Math.round(sizeKg * 3.6) / 1000,
-    });
-  }
-
-  return entries;
+  return [
+    // Specification Fertilizer SKU: P & ONN, Coated/Laminated PP woven, 55x90 cm, 80g weight
+    {
+      brand: "P & ONN",
+      productCategory: "Fertiliser" as const,
+      materialType: "Coated/Laminated PP woven" as const,
+      dimensions: "55x90 cm",
+      sizeKg: 50,
+      emptySackWeightG: 80.0,
+      discount: Math.round((80 / 1000) * INCENTIVE_PER_KG * 100) / 100 || 0.05,
+    },
+    {
+      brand: "CropCare Plus",
+      productCategory: "Fertiliser" as const,
+      materialType: "Laminated/coated woven PP" as const,
+      dimensions: "50x85 cm",
+      sizeKg: 40,
+      emptySackWeightG: 75.0,
+      discount: Math.round((75 / 1000) * INCENTIVE_PER_KG * 100) / 100 || 0.05,
+    },
+    {
+      brand: "AgriGrow",
+      productCategory: "Fertiliser" as const,
+      materialType: "Plain / non-laminated woven PP" as const,
+      dimensions: "45x75 cm",
+      sizeKg: 25,
+      emptySackWeightG: 65.0,
+      discount: Math.round((65 / 1000) * INCENTIVE_PER_KG * 100) / 100 || 0.04,
+    },
+    {
+      brand: "NutriFeed Gold",
+      productCategory: "Animal Feed" as const,
+      materialType: "BOPP-laminated woven PP" as const,
+      dimensions: "55x95 cm",
+      sizeKg: 50,
+      emptySackWeightG: 85.0,
+      discount: Math.round((85 / 1000) * INCENTIVE_PER_KG * 100) / 100 || 0.05,
+    },
+    {
+      brand: "AeroFeed Dairy",
+      productCategory: "Animal Feed" as const,
+      materialType: "Woven PP + inner PE liner" as const,
+      dimensions: "45x80 cm",
+      sizeKg: 25,
+      emptySackWeightG: 70.0,
+      discount: Math.round((70 / 1000) * INCENTIVE_PER_KG * 100) / 100 || 0.04,
+    },
+    {
+      brand: "AquaGrow",
+      productCategory: "Animal Feed" as const,
+      materialType: "Plain / non-laminated woven PP" as const,
+      dimensions: "40x70 cm",
+      sizeKg: 20,
+      emptySackWeightG: 60.0,
+      discount: Math.round((60 / 1000) * INCENTIVE_PER_KG * 100) / 100 || 0.04,
+    },
+  ];
 }
 
 const SUPPLIERS = [
@@ -77,7 +111,7 @@ const SUPPLIERS = [
 ];
 
 const COLLECTORS = [
-  { companyName: "EcoPlast Collector & Processing", processCapacityKg: 500000, phone: "03-77889900" },
+  { companyName: "EcoPlast Collector Hub", processCapacityKg: 500000, phone: "03-77889900" },
   { companyName: "GreenCycle Recovery Hub", processCapacityKg: 350000, phone: "04-4567890" },
   { companyName: "Malaysia Polymer Collectors", processCapacityKg: 420000, phone: "07-3344556" },
   { companyName: "Circular Sack Collectors Johor", processCapacityKg: 280000, phone: "07-2233445" },
@@ -174,29 +208,51 @@ async function insertBatches<T>(
 }
 
 async function clearBusinessData() {
-  console.log("Clearing existing business data...");
-  await prisma.manufacturerSales.deleteMany();
-  await prisma.collectorDelivery.deleteMany();
-  await prisma.sackReturn.deleteMany();
-  await prisma.fertilizerDistribution.deleteMany();
-  await prisma.sackCatalog.deleteMany();
-  await prisma.farmer.deleteMany();
-  await prisma.supplier.deleteMany();
-  await prisma.collector.deleteMany();
-  await prisma.manufacturer.deleteMany();
+  console.log("Clearing existing program business data...");
+  await prisma.manufacturerSales.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.collectorDelivery.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.sackReturn.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.fertilizerDistribution.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.sackCatalog.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.farmer.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.supplier.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.collector.deleteMany({ where: { programId: PROGRAM_ID } });
+  await prisma.manufacturer.deleteMany({ where: { programId: PROGRAM_ID } });
+}
+
+async function seedProgram() {
+  console.log("Seeding demo program...");
+  return prisma.program.upsert({
+    where: { id: PROGRAM_ID },
+    update: {
+      name: "Sack2Loop Malaysia Circular Pilot",
+      code: "S2L-MY-2025",
+      description: "Handover demo multi-tenant program",
+    },
+    create: {
+      id: PROGRAM_ID,
+      name: "Sack2Loop Malaysia Circular Pilot",
+      code: "S2L-MY-2025",
+      description: "Handover demo multi-tenant program",
+    },
+  });
 }
 
 async function seedMasters() {
-  console.log("Seeding master tables...");
+  console.log("Seeding master tables with program_id...");
 
   const sackCatalogSeed = buildSackCatalogSeed();
   const sacks = await Promise.all(
     sackCatalogSeed.map((sack) =>
       prisma.sackCatalog.create({
         data: {
+          programId: PROGRAM_ID,
+          brand: sack.brand,
           productCategory: sack.productCategory,
           materialType: sack.materialType,
+          dimensions: sack.dimensions,
           sizeKg: sack.sizeKg,
+          emptySackWeightG: sack.emptySackWeightG,
           discountValueRm: sack.discount,
         },
       }),
@@ -204,13 +260,21 @@ async function seedMasters() {
   );
 
   const suppliers = await Promise.all(
-    SUPPLIERS.map((supplier) => prisma.supplier.create({ data: supplier })),
+    SUPPLIERS.map((supplier) =>
+      prisma.supplier.create({
+        data: {
+          ...supplier,
+          programId: PROGRAM_ID,
+        },
+      }),
+    ),
   );
 
   const collectors = await Promise.all(
     COLLECTORS.map((collector) =>
       prisma.collector.create({
         data: {
+          programId: PROGRAM_ID,
           companyName: collector.companyName,
           processCapacityKg: collector.processCapacityKg,
           phone: collector.phone,
@@ -223,6 +287,7 @@ async function seedMasters() {
     MANUFACTURERS.map((manufacturer) =>
       prisma.manufacturer.create({
         data: {
+          programId: PROGRAM_ID,
           companyName: manufacturer.companyName,
           phone: manufacturer.phone,
         },
@@ -236,6 +301,7 @@ async function seedMasters() {
       const last = FARMER_LAST[(index * 3) % FARMER_LAST.length]!;
       return prisma.farmer.create({
         data: {
+          programId: PROGRAM_ID,
           name: `${first} bin ${last}`,
           phone: `01${randomInt(2, 9)}-${randomInt(100, 999)}${randomInt(1000, 9999)}`,
           address: pick(ADDRESSES),
@@ -248,6 +314,7 @@ async function seedMasters() {
 }
 
 type DistributionRow = {
+  programId: string;
   date: Date;
   supplierId: number;
   farmerId: number;
@@ -268,6 +335,7 @@ async function seedDistributions(
   for (const { year, month, count } of MONTHLY_DISTRIBUTION_COUNTS) {
     for (let i = 0; i < count; i++) {
       distributions.push({
+        programId: PROGRAM_ID,
         date: randomDateInMonth(year, month),
         supplierId: pick(supplierIds),
         farmerId: pick(farmerIds),
@@ -285,9 +353,12 @@ async function seedDistributions(
 }
 
 type ReturnAccumulator = {
+  programId: string;
+  batchId: string;
   date: Date;
   farmerId: number;
   supplierId: number;
+  collectorId: number;
   sackId: number;
   quantity: number;
   totalDiscountRm: number;
@@ -297,20 +368,17 @@ async function seedReturns(
   masters: Awaited<ReturnType<typeof seedMasters>>,
   distributions: DistributionRow[],
 ) {
-  console.log("Seeding sack returns (40k+ records)...");
+  console.log("Seeding sack returns with Batch IDs and Collectors (42k+ records)...");
 
   const sackDiscountMap = new Map(
     masters.sacks.map((sack) => [sack.id, Number(sack.discountValueRm)]),
   );
-  const sackWeightMap = new Map(
-    masters.sacks.map((sack) => [
-      sack.id,
-      Math.round(sack.sizeKg * 3.6) / 1000,
-    ]),
+  const sackWeightGMap = new Map(
+    masters.sacks.map((sack) => [sack.id, Number(sack.emptySackWeightG)]),
   );
 
   const totalDistributed = distributions.reduce((sum, row) => sum + row.quantity, 0);
-  const targetQuantity = Math.round(totalDistributed * 0.35);
+  const targetQuantity = Math.round(totalDistributed * 0.35); // 35% collection target
   const returnRecordCount = 42_000;
 
   const returnIndices = new Set<number>();
@@ -321,6 +389,7 @@ async function seedReturns(
   const returns: ReturnAccumulator[] = [];
   let allocatedQuantity = 0;
   const sortedIndices = Array.from(returnIndices);
+  const collectorIds = masters.collectors.map((c) => c.id);
 
   for (let i = 0; i < sortedIndices.length; i++) {
     const dist = distributions[sortedIndices[i]!]!;
@@ -340,12 +409,18 @@ async function seedReturns(
     }
 
     allocatedQuantity += quantity;
-    const discount = sackDiscountMap.get(dist.sackId) ?? 1.5;
+    const discount = sackDiscountMap.get(dist.sackId) ?? 0.05;
+    const returnDate = addMonths(dist.date, randomInt(0, 2));
+    const yearMonth = `${returnDate.getUTCFullYear()}${String(returnDate.getUTCMonth() + 1).padStart(2, "0")}`;
+    const batchId = `BATCH-${yearMonth}-${String(i + 1).padStart(5, "0")}`;
 
     returns.push({
-      date: addMonths(dist.date, randomInt(0, 2)),
+      programId: PROGRAM_ID,
+      batchId,
+      date: returnDate,
       farmerId: dist.farmerId,
       supplierId: dist.supplierId,
+      collectorId: pick(collectorIds),
       sackId: dist.sackId,
       quantity,
       totalDiscountRm: round2(quantity * discount),
@@ -358,19 +433,20 @@ async function seedReturns(
 
   const totalCollected = returns.reduce((sum, row) => sum + row.quantity, 0);
 
-  return { returns, totalCollected, sackWeightMap };
+  return { returns, totalCollected, sackWeightGMap };
 }
 
 async function seedCollectorDeliveries(
   masters: Awaited<ReturnType<typeof seedMasters>>,
   returns: ReturnAccumulator[],
-  sackWeightMap: Map<number, number>,
+  sackWeightGMap: Map<number, number>,
 ) {
-  console.log("Seeding collector deliveries...");
+  console.log("Seeding collector receipts with strict output <= input weight validation...");
 
   type DeliveryBucket = {
     monthKey: string;
     supplierId: number;
+    collectorId: number;
     quantity: number;
     weightKg: number;
   };
@@ -379,8 +455,10 @@ async function seedCollectorDeliveries(
 
   for (const row of returns) {
     const monthKey = `${row.date.getUTCFullYear()}-${String(row.date.getUTCMonth() + 1).padStart(2, "0")}`;
-    const key = `${monthKey}:${row.supplierId}`;
-    const weight = row.quantity * (sackWeightMap.get(row.sackId) ?? 0.14);
+    const key = `${monthKey}:${row.collectorId}:${row.supplierId}`;
+    const emptyG = sackWeightGMap.get(row.sackId) ?? 80;
+    // Dynamic mass formula: (pieces * empty_sack_weight_g) / 1000
+    const weight = (row.quantity * emptyG) / 1000;
     const existing = buckets.get(key);
 
     if (existing) {
@@ -390,6 +468,7 @@ async function seedCollectorDeliveries(
       buckets.set(key, {
         monthKey,
         supplierId: row.supplierId,
+        collectorId: row.collectorId,
         quantity: row.quantity,
         weightKg: weight,
       });
@@ -399,13 +478,15 @@ async function seedCollectorDeliveries(
   const deliveries = Array.from(buckets.values()).map((bucket) => {
     const [year, month] = bucket.monthKey.split("-").map(Number);
     const inputWeightKg = round2(bucket.weightKg);
-    const recoveryRate = 0.82 + Math.random() * 0.08;
-    const outputWeightKg = round2(inputWeightKg * recoveryRate);
+    // Strict requirement: Recycled output NEVER exceeds input weight (e.g. 82% to 88% yield)
+    const recoveryRate = 0.82 + Math.random() * 0.06;
+    const outputWeightKg = Math.min(inputWeightKg, round2(inputWeightKg * recoveryRate));
 
     return {
+      programId: PROGRAM_ID,
       date: addMonths(randomDateInMonth(year!, month!), randomInt(0, 1)),
       supplierId: bucket.supplierId,
-      collectorId: pick(masters.collectors.map((c) => c.id)),
+      collectorId: bucket.collectorId,
       sackQty: bucket.quantity,
       inputWeightKg,
       outputWeightKg,
@@ -422,39 +503,43 @@ async function seedCollectorDeliveries(
 async function seedManufacturerSales(
   masters: Awaited<ReturnType<typeof seedMasters>>,
 ) {
-  console.log("Seeding manufacturer sales...");
+  console.log("Seeding manufacturer sales with RM3.55/kg rPP market value...");
 
   const collectorIds = masters.collectors.map((c) => c.id);
   const manufacturerIds = masters.manufacturers.map((m) => m.id);
 
   const initialSales = [
     {
+      programId: PROGRAM_ID,
       date: new Date("2026-02-15"),
       recyclerId: collectorIds[0] ?? 1,
       manufacturerId: manufacturerIds[0] ?? 1,
       purchaseWeightKg: 4500.0,
-      salesPriceRm: 11250.0,
+      salesPriceRm: round2(4500.0 * RPP_VALUE_PER_KG),
     },
     {
+      programId: PROGRAM_ID,
       date: new Date("2026-02-28"),
       recyclerId: collectorIds[1] ?? 2,
       manufacturerId: manufacturerIds[1] ?? 2,
       purchaseWeightKg: 3800.0,
-      salesPriceRm: 9500.0,
+      salesPriceRm: round2(3800.0 * RPP_VALUE_PER_KG),
     },
     {
+      programId: PROGRAM_ID,
       date: new Date("2026-03-10"),
       recyclerId: collectorIds[2] ?? 3,
       manufacturerId: manufacturerIds[2] ?? 3,
       purchaseWeightKg: 5200.0,
-      salesPriceRm: 13000.0,
+      salesPriceRm: round2(5200.0 * RPP_VALUE_PER_KG),
     },
     {
+      programId: PROGRAM_ID,
       date: new Date("2026-03-15"),
       recyclerId: collectorIds[0] ?? 1,
       manufacturerId: manufacturerIds[3] ?? 4,
       purchaseWeightKg: 2900.0,
-      salesPriceRm: 7250.0,
+      salesPriceRm: round2(2900.0 * RPP_VALUE_PER_KG),
     },
   ];
 
@@ -478,55 +563,134 @@ async function printSummary() {
     deliveryAgg,
     discountSum,
     salesAgg,
+    massDist,
+    massReturn,
   ] = await Promise.all([
-    prisma.farmer.count(),
-    prisma.supplier.count(),
-    prisma.collector.count(),
-    prisma.manufacturer.count(),
-    prisma.sackCatalog.count(),
-    prisma.fertilizerDistribution.count(),
-    prisma.sackReturn.count(),
-    prisma.collectorDelivery.count(),
-    prisma.manufacturerSales.count(),
-    prisma.fertilizerDistribution.aggregate({ _sum: { quantity: true } }),
-    prisma.sackReturn.aggregate({ _sum: { quantity: true } }),
-    prisma.collectorDelivery.aggregate({ _sum: { inputWeightKg: true, outputWeightKg: true } }),
-    prisma.sackReturn.aggregate({ _sum: { totalDiscountRm: true } }),
-    prisma.manufacturerSales.aggregate({ _sum: { purchaseWeightKg: true, salesPriceRm: true } }),
+    prisma.farmer.count({ where: { programId: PROGRAM_ID } }),
+    prisma.supplier.count({ where: { programId: PROGRAM_ID } }),
+    prisma.collector.count({ where: { programId: PROGRAM_ID } }),
+    prisma.manufacturer.count({ where: { programId: PROGRAM_ID } }),
+    prisma.sackCatalog.count({ where: { programId: PROGRAM_ID } }),
+    prisma.fertilizerDistribution.count({ where: { programId: PROGRAM_ID } }),
+    prisma.sackReturn.count({ where: { programId: PROGRAM_ID } }),
+    prisma.collectorDelivery.count({ where: { programId: PROGRAM_ID } }),
+    prisma.manufacturerSales.count({ where: { programId: PROGRAM_ID } }),
+    prisma.fertilizerDistribution.aggregate({
+      where: { programId: PROGRAM_ID },
+      _sum: { quantity: true },
+    }),
+    prisma.sackReturn.aggregate({
+      where: { programId: PROGRAM_ID },
+      _sum: { quantity: true },
+    }),
+    prisma.collectorDelivery.aggregate({
+      where: { programId: PROGRAM_ID },
+      _sum: { sackQty: true, inputWeightKg: true, outputWeightKg: true },
+    }),
+    prisma.sackReturn.aggregate({
+      where: { programId: PROGRAM_ID },
+      _sum: { totalDiscountRm: true },
+    }),
+    prisma.manufacturerSales.aggregate({
+      where: { programId: PROGRAM_ID },
+      _sum: { purchaseWeightKg: true, salesPriceRm: true },
+    }),
+    prisma.$queryRaw<Array<{ totalKg: number }>>`
+      SELECT CAST(COALESCE(SUM(fd.quantity * sc.empty_sack_weight_g / 1000), 0) AS DECIMAL(20,2)) AS totalKg
+      FROM fertilizer_distribution fd
+      JOIN sack_catalog sc ON sc.id = fd.sack_id
+      WHERE fd.program_id = ${PROGRAM_ID}
+    `,
+    prisma.$queryRaw<Array<{ totalKg: number }>>`
+      SELECT CAST(COALESCE(SUM(sr.quantity * sc.empty_sack_weight_g / 1000), 0) AS DECIMAL(20,2)) AS totalKg
+      FROM sack_return sr
+      JOIN sack_catalog sc ON sc.id = sr.sack_id
+      WHERE sr.program_id = ${PROGRAM_ID}
+    `,
   ]);
 
-  const distributed = Number(distQty._sum.quantity ?? 0);
-  const collected = Number(returnQty._sum.quantity ?? 0);
-  const returnRate = distributed > 0 ? ((collected / distributed) * 100).toFixed(1) : "0";
+  const distributedPcs = Number(distQty._sum.quantity ?? 0);
+  const collectedPcs = Number(returnQty._sum.quantity ?? 0);
+  const deliveredPcs = Number(deliveryAgg._sum.sackQty ?? 0);
+  const collectionRate = distributedPcs > 0 ? ((collectedPcs / distributedPcs) * 100).toFixed(1) : "0";
+
+  const distKg = Number(massDist[0]?.totalKg ?? 0);
+  const returnKg = Number(massReturn[0]?.totalKg ?? 0);
+  const distTonnes = (distKg / 1000).toFixed(2);
+  const returnTonnes = (returnKg / 1000).toFixed(2);
+
   const inputKg = Number(deliveryAgg._sum.inputWeightKg ?? 0);
   const outputKg = Number(deliveryAgg._sum.outputWeightKg ?? 0);
   const recoveryYield = inputKg > 0 ? ((outputKg / inputKg) * 100).toFixed(1) : "0";
+
+  const returnGapPieces = Math.max(0, distributedPcs - collectedPcs);
+  const returnGapPct = distributedPcs > 0 ? ((returnGapPieces / distributedPcs) * 100).toFixed(1) : "0";
+
+  const totalDiscountRm = Number(discountSum._sum.totalDiscountRm ?? 0);
   const salesWeightKg = Number(salesAgg._sum.purchaseWeightKg ?? 0);
   const salesPriceTotal = Number(salesAgg._sum.salesPriceRm ?? 0);
+  const logisticsTrips = deliveries;
+  const totalLogisticsCost = logisticsTrips * LOGISTICS_TRIP_COST_RM;
+  const rppEconomicValue = outputKg * RPP_VALUE_PER_KG;
 
-  console.log("\nSeed complete:");
-  console.log(`  Masters: ${farmers} farmers, ${suppliers} suppliers, ${collectors} collectors, ${manufacturers} manufacturers, ${sacks} sack types`);
-  console.log(`  Transactions: ${distributions.toLocaleString()} distributions, ${returns.toLocaleString()} returns, ${deliveries} collector deliveries, ${sales} manufacturer sales`);
-  console.log(`  Total distributed: ${distributed.toLocaleString()} pcs`);
-  console.log(`  Total collected: ${collected.toLocaleString()} pcs (${returnRate}% collection rate)`);
-  console.log(`  Collector recovery yield: ${recoveryYield}% (${outputKg.toLocaleString()} kg out / ${inputKg.toLocaleString()} kg in)`);
-  console.log(`  Total discounts: RM ${Number(discountSum._sum.totalDiscountRm ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
-  console.log(`  Total manufacturer sales: ${salesWeightKg.toLocaleString()} kg / RM ${salesPriceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+  console.log("\n=======================================================");
+  console.log("   SACK2LOOP PROGRAM SEED VERIFICATION (24 KPIS)       ");
+  console.log("=======================================================");
+  console.log(`Program ID: ${PROGRAM_ID}`);
+  console.log(`Constants: Incentive RM${INCENTIVE_PER_KG}/kg | Trip RM${LOGISTICS_TRIP_COST_RM} | rPP RM${RPP_VALUE_PER_KG}/kg\n`);
+
+  console.log("Master Entities:");
+  console.log(`  1. Farmers: ${farmers} (No login access)`);
+  console.log(`  2. Suppliers: ${suppliers} (Dedicated login)`);
+  console.log(`  3. Collectors: ${collectors} (Record-keeping only - No login)`);
+  console.log(`  4. Manufacturers: ${manufacturers} (PRO dedicated login)`);
+  console.log(`  5. Sack Catalog SKUs: ${sacks} (Includes P & ONN 80g SKU)`);
+
+  console.log("\nSack Volume KPIs:");
+  console.log(`  6. Sacks Distributed: ${distributedPcs.toLocaleString()} pcs`);
+  console.log(`  7. Sacks Collected: ${collectedPcs.toLocaleString()} pcs`);
+  console.log(`  8. Sacks to Recycler: ${deliveredPcs.toLocaleString()} pcs`);
+  console.log(`  9. Collection Rate: ${collectionRate}%`);
+
+  console.log("\nDynamic Mass KPIs (Formula: pieces * empty_sack_weight_g / 1000):");
+  console.log(` 10. Distributed Mass (kg): ${distKg.toLocaleString()} kg`);
+  console.log(` 11. Distributed Mass (tonnes): ${distTonnes} t`);
+  console.log(` 12. Collected Mass (kg): ${returnKg.toLocaleString()} kg`);
+  console.log(` 13. Collected Mass (tonnes): ${returnTonnes} t`);
+
+  console.log("\nRecycler Processing KPIs (Output <= Input strict validation):");
+  console.log(` 14. Accepted Input Weight (kg): ${inputKg.toLocaleString()} kg`);
+  console.log(` 15. Accepted Input Weight (tonnes): ${(inputKg / 1000).toFixed(2)} t`);
+  console.log(` 16. Recycled Output Weight (kg): ${outputKg.toLocaleString()} kg`);
+  console.log(` 17. Recycled Output Weight (tonnes): ${(outputKg / 1000).toFixed(2)} t`);
+  console.log(` 18. Recycler Recovery Yield: ${recoveryYield}% (Validated <= 100%)`);
+
+  console.log("\nLeakage & Incentive KPIs:");
+  console.log(` 19. Return Gap (pieces): ${returnGapPieces.toLocaleString()} pcs`);
+  console.log(` 20. Return Gap (%): ${returnGapPct}%`);
+  console.log(` 21. Total Farmer Incentive: RM ${totalDiscountRm.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+
+  console.log("\nFinancial & Economic Circularity KPIs:");
+  console.log(` 22. Logistics Deliveries & Cost: ${logisticsTrips} trips = RM ${totalLogisticsCost.toLocaleString()}`);
+  console.log(` 23. Recycled PP Value Generated: RM ${rppEconomicValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+  console.log(` 24. Manufacturer Sales Recorded: ${salesWeightKg.toLocaleString()} kg = RM ${salesPriceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+  console.log("=======================================================\n");
 }
 
 async function main() {
-  console.log("Starting Sack2Loop seed...\n");
+  console.log("Starting Sack2Loop handover demo seed...\n");
   const started = Date.now();
 
+  await seedProgram();
   await clearBusinessData();
   const masters = await seedMasters();
   const distributions = await seedDistributions(masters);
-  const { returns, sackWeightMap } = await seedReturns(masters, distributions);
-  await seedCollectorDeliveries(masters, returns, sackWeightMap);
+  const { returns, sackWeightGMap } = await seedReturns(masters, distributions);
+  await seedCollectorDeliveries(masters, returns, sackWeightGMap);
   await seedManufacturerSales(masters);
   await printSummary();
 
-  console.log(`\nFinished in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  console.log(`Finished seeding in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }
 
 main()

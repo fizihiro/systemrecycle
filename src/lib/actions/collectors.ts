@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { getCurrentProgramId } from "@/lib/tenant";
 import {
   actionError,
   actionSuccess,
@@ -43,9 +44,11 @@ export type CollectorRecord = ReturnType<typeof serialize>;
 export async function getCollectors(
   page?: string | number,
 ): Promise<PaginatedResult<CollectorRecord>> {
-  const total = await prisma.collector.count();
+  const programId = await getCurrentProgramId();
+  const total = await prisma.collector.count({ where: { programId } });
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.collector.findMany({
+    where: { programId },
     orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -55,7 +58,9 @@ export async function getCollectors(
 }
 
 export async function getCollectorOptions() {
+  const programId = await getCurrentProgramId();
   return prisma.collector.findMany({
+    where: { programId },
     orderBy: { companyName: "asc" },
     select: { id: true, companyName: true },
   });
@@ -77,7 +82,13 @@ export async function createCollector(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.collector.create({ data: parsed.data });
+  const programId = await getCurrentProgramId();
+  await prisma.collector.create({
+    data: {
+      ...parsed.data,
+      programId,
+    },
+  });
   revalidatePath(PATH);
   return actionSuccess();
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { getCurrentProgramId } from "@/lib/tenant";
 import {
   actionError,
   actionSuccess,
@@ -41,9 +42,11 @@ export type ManufacturerRecord = ReturnType<typeof serialize>;
 export async function getManufacturers(
   page?: string | number,
 ): Promise<PaginatedResult<ManufacturerRecord>> {
-  const total = await prisma.manufacturer.count();
+  const programId = await getCurrentProgramId();
+  const total = await prisma.manufacturer.count({ where: { programId } });
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.manufacturer.findMany({
+    where: { programId },
     orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
@@ -53,7 +56,9 @@ export async function getManufacturers(
 }
 
 export async function getManufacturerOptions() {
+  const programId = await getCurrentProgramId();
   return prisma.manufacturer.findMany({
+    where: { programId },
     orderBy: { companyName: "asc" },
     select: { id: true, companyName: true },
   });
@@ -74,7 +79,13 @@ export async function createManufacturer(
     return actionError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  await prisma.manufacturer.create({ data: parsed.data });
+  const programId = await getCurrentProgramId();
+  await prisma.manufacturer.create({
+    data: {
+      ...parsed.data,
+      programId,
+    },
+  });
   revalidatePath(PATH);
   return actionSuccess();
 }

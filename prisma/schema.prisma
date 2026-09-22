@@ -6,29 +6,58 @@ datasource db {
   provider = "mysql"
 }
 
+// ─── Multi-Tenant Program Model ──────────────────────────────
+
+model Program {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  farmers                 Farmer[]
+  suppliers               Supplier[]
+  collectors              Collector[]
+  manufacturers           Manufacturer[]
+  sackCatalogs            SackCatalog[]
+  fertilizerDistributions FertilizerDistribution[]
+  sackReturns             SackReturn[]
+  collectorDeliveries     CollectorDelivery[]
+  manufacturerSales       ManufacturerSales[]
+  users                   User[]
+
+  @@map("program")
+}
+
 // ─── Master Tables ───────────────────────────────────────────
 
 model Farmer {
-  id      Int    @id @default(autoincrement())
-  name    String
-  phone   String
-  address String @db.Text
+  id        Int      @id @default(autoincrement())
+  programId String   @default("prog_sack2loop_demo") @map("program_id")
+  name      String
+  phone     String
+  address   String   @db.Text
 
+  program                 Program                  @relation(fields: [programId], references: [id])
   fertilizerDistributions FertilizerDistribution[]
   sackReturns             SackReturn[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@map("farmer")
 }
 
 model Supplier {
-  id          Int    @id @default(autoincrement())
-  companyName String @map("company_name")
+  id          Int      @id @default(autoincrement())
+  programId   String   @default("prog_sack2loop_demo") @map("program_id")
+  companyName String   @map("company_name")
   location    String
   phone       String
 
+  program                 Program                  @relation(fields: [programId], references: [id])
   fertilizerDistributions FertilizerDistribution[]
   sackReturns             SackReturn[]
   collectorDeliveries     CollectorDelivery[]
@@ -36,50 +65,64 @@ model Supplier {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@map("supplier")
 }
 
 model Collector {
   id                Int     @id @default(autoincrement())
+  programId         String  @default("prog_sack2loop_demo") @map("program_id")
   companyName       String  @map("company_name")
   processCapacityKg Decimal @map("process_capacity_kg") @db.Decimal(12, 2)
   phone             String
 
+  program             Program             @relation(fields: [programId], references: [id])
   collectorDeliveries CollectorDelivery[]
   manufacturerSales   ManufacturerSales[]
+  sackReturns         SackReturn[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@map("collector")
 }
 
 model Manufacturer {
-  id          Int    @id @default(autoincrement())
-  companyName String @map("company_name")
+  id          Int      @id @default(autoincrement())
+  programId   String   @default("prog_sack2loop_demo") @map("program_id")
+  companyName String   @map("company_name")
   phone       String
 
+  program           Program             @relation(fields: [programId], references: [id])
   manufacturerSales ManufacturerSales[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@map("manufacturer")
 }
 
 model SackCatalog {
-  id              Int     @id @default(autoincrement())
-  productCategory String  @map("product_category")
-  materialType    String  @map("material_type")
-  sizeKg          Int     @map("size_kg")
-  discountValueRm Decimal @map("discount_value_rm") @db.Decimal(10, 2)
+  id               Int     @id @default(autoincrement())
+  programId        String  @default("prog_sack2loop_demo") @map("program_id")
+  brand            String?
+  productCategory  String  @map("product_category")
+  materialType     String  @map("material_type")
+  dimensions       String?
+  sizeKg           Int     @map("size_kg")
+  emptySackWeightG Decimal @default(80.00) @map("empty_sack_weight_g") @db.Decimal(8, 2)
+  discountValueRm  Decimal @map("discount_value_rm") @db.Decimal(10, 2)
 
+  program                 Program                  @relation(fields: [programId], references: [id])
   fertilizerDistributions FertilizerDistribution[]
   sackReturns             SackReturn[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@map("sack_catalog")
 }
 
@@ -87,12 +130,14 @@ model SackCatalog {
 
 model FertilizerDistribution {
   id         Int      @id @default(autoincrement())
+  programId  String   @default("prog_sack2loop_demo") @map("program_id")
   date       DateTime @db.Date
   supplierId Int      @map("supplier_id")
   farmerId   Int      @map("farmer_id")
   sackId     Int      @map("sack_id")
   quantity   Int
 
+  program  Program     @relation(fields: [programId], references: [id])
   supplier Supplier    @relation(fields: [supplierId], references: [id])
   farmer   Farmer      @relation(fields: [farmerId], references: [id])
   sack     SackCatalog @relation(fields: [sackId], references: [id])
@@ -100,6 +145,7 @@ model FertilizerDistribution {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@index([date])
   @@index([supplierId])
   @@index([farmerId])
@@ -108,28 +154,36 @@ model FertilizerDistribution {
 
 model SackReturn {
   id              Int      @id @default(autoincrement())
+  programId       String   @default("prog_sack2loop_demo") @map("program_id")
+  batchId         String?  @map("batch_id")
   date            DateTime @db.Date
   farmerId        Int      @map("farmer_id")
   supplierId      Int      @map("supplier_id")
+  collectorId     Int?     @map("collector_id")
   sackId          Int      @map("sack_id")
   quantity        Int      @map("quantity")
   totalDiscountRm Decimal  @map("total_discount_rm") @db.Decimal(10, 2)
 
-  farmer   Farmer      @relation(fields: [farmerId], references: [id])
-  supplier Supplier    @relation(fields: [supplierId], references: [id])
-  sack     SackCatalog @relation(fields: [sackId], references: [id])
+  program   Program      @relation(fields: [programId], references: [id])
+  farmer    Farmer       @relation(fields: [farmerId], references: [id])
+  supplier  Supplier     @relation(fields: [supplierId], references: [id])
+  collector Collector?   @relation(fields: [collectorId], references: [id])
+  sack      SackCatalog  @relation(fields: [sackId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@index([date])
   @@index([farmerId])
   @@index([supplierId])
+  @@index([collectorId])
   @@map("sack_return")
 }
 
 model CollectorDelivery {
   id             Int      @id @default(autoincrement())
+  programId      String   @default("prog_sack2loop_demo") @map("program_id")
   date           DateTime @db.Date
   supplierId     Int      @map("supplier_id")
   collectorId    Int      @map("collector_id")
@@ -137,12 +191,14 @@ model CollectorDelivery {
   inputWeightKg  Decimal  @map("input_weight_kg") @db.Decimal(12, 2)
   outputWeightKg Decimal  @map("output_weight_kg") @db.Decimal(12, 2)
 
+  program   Program   @relation(fields: [programId], references: [id])
   supplier  Supplier  @relation(fields: [supplierId], references: [id])
   collector Collector @relation(fields: [collectorId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@index([date])
   @@index([supplierId])
   @@index([collectorId])
@@ -151,18 +207,21 @@ model CollectorDelivery {
 
 model ManufacturerSales {
   id               Int      @id @default(autoincrement())
+  programId        String   @default("prog_sack2loop_demo") @map("program_id")
   date             DateTime @db.Date
   recyclerId       Int      @map("recycler_id")
   manufacturerId   Int      @map("manufacturer_id")
   purchaseWeightKg Decimal  @map("purchase_weight_kg") @db.Decimal(12, 2)
   salesPriceRm     Decimal  @map("sales_price_rm") @db.Decimal(12, 2)
 
+  program      Program      @relation(fields: [programId], references: [id])
   recycler     Collector    @relation(fields: [recyclerId], references: [id])
   manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([programId])
   @@index([date])
   @@index([recyclerId])
   @@index([manufacturerId])
@@ -173,6 +232,7 @@ model ManufacturerSales {
 
 model User {
   id            String    @id
+  programId     String?   @map("program_id")
   name          String
   email         String
   emailVerified Boolean   @map("email_verified")
@@ -180,10 +240,12 @@ model User {
   role          String    @default("admin")
   createdAt     DateTime  @map("created_at")
   updatedAt     DateTime  @map("updated_at")
+  program       Program?  @relation(fields: [programId], references: [id])
   sessions      Session[]
   accounts      Account[]
 
   @@unique([email])
+  @@index([programId])
   @@map("user")
 }
 

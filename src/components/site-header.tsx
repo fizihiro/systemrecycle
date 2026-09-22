@@ -85,7 +85,14 @@ export function SiteHeader() {
             <DropdownMenuGroup>
               <DropdownMenuItem disabled>
                 <User className="mr-2 h-4 w-4" />
-                Admin account
+                <span className="capitalize">
+                  {(session?.user && "role" in session.user
+                    ? session.user.role === "manufacturer"
+                      ? "PRO Manufacturer"
+                      : String(session.user.role)
+                    : "Admin")}{" "}
+                  account
+                </span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
