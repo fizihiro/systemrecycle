@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FormSelect } from "@/components/crud/form-select";
+import { FormCombobox } from "@/components/crud/form-combobox";
 import {
   DeleteRecordButton,
   EditRecordButton,
@@ -159,24 +159,30 @@ export function CollectorDeliveryManager({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">No.</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Collector</TableHead>
-                <TableHead>Sack Qty</TableHead>
-                <TableHead>Input Weight (KG)</TableHead>
-                <TableHead>Output Weight (KG)</TableHead>
+                <TableHead className="whitespace-nowrap">Accepted Input (pcs | kg | tonnes)</TableHead>
+                <TableHead className="whitespace-nowrap">Recycled Output (kg | tonnes)</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <TableRow key={item.id}>
+                  <TableCell className="text-muted-foreground font-medium">
+                    {(pagination.page - 1) * pagination.pageSize + index + 1}
+                  </TableCell>
                   <TableCell>{formatDate(item.date)}</TableCell>
                   <TableCell>{item.supplierName}</TableCell>
                   <TableCell className="font-medium">{item.collectorName}</TableCell>
-                  <TableCell>{item.sackQty.toLocaleString()} pcs</TableCell>
-                  <TableCell>{formatNumber(item.inputWeightKg)} kg</TableCell>
-                  <TableCell>{formatNumber(item.outputWeightKg)} kg</TableCell>
+                  <TableCell className="font-medium font-mono text-xs whitespace-nowrap">
+                    {item.inputMassFormatted ?? `${item.sackQty.toLocaleString()} pcs | ${formatNumber(item.inputWeightKg)} kg`}
+                  </TableCell>
+                  <TableCell className="font-medium font-mono text-xs whitespace-nowrap">
+                    {item.outputMassFormatted ?? `${formatNumber(item.outputWeightKg)} kg`}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-4">
                       <EditRecordButton
@@ -197,7 +203,7 @@ export function CollectorDeliveryManager({
       )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit Recycler Receipt" : "Record Recycler Receipt"}
@@ -214,26 +220,28 @@ export function CollectorDeliveryManager({
                 required
               />
             </div>
-            <FormSelect
+            <FormCombobox
               id="collectorId"
               name="collectorId"
               label="Collector (Mandatory)"
               value={collectorId}
               onValueChange={setCollectorId}
               placeholder="Select collector"
+              searchPlaceholder="Search collector by name..."
               options={collectors.map((item) => ({
                 value: String(item.id),
                 label: item.label,
               }))}
               required
             />
-            <FormSelect
+            <FormCombobox
               id="supplierId"
               name="supplierId"
               label="Supplier"
               value={supplierId}
               onValueChange={setSupplierId}
               placeholder="Select supplier"
+              searchPlaceholder="Search supplier by name..."
               options={suppliers.map((item) => ({
                 value: String(item.id),
                 label: item.label,

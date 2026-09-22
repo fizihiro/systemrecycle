@@ -57,7 +57,7 @@ export async function getManufacturerSales(
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.manufacturerSales.findMany({
     where: { programId },
-    orderBy: [{ date: "desc" }, { id: "desc" }],
+    orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
     include: {

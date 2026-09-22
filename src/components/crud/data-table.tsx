@@ -15,8 +15,10 @@ export function DataTable({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border">
-      {children}
+    <div className="rounded-lg border overflow-hidden">
+      <div className="overflow-x-auto w-full">
+        {children}
+      </div>
       <Suspense fallback={<PaginationFallback />}>
         <DataTablePagination pagination={pagination} />
       </Suspense>

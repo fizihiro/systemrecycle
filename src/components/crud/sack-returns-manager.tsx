@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FormSelect } from "@/components/crud/form-select";
+import { FormCombobox } from "@/components/crud/form-combobox";
 import {
   DeleteRecordButton,
   EditRecordButton,
@@ -182,29 +182,36 @@ export function SackReturnsManager({
         )
       ) : (
         <DataTable pagination={pagination}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Batch ID</TableHead>
-                <TableHead>Farmer</TableHead>
-                <TableHead>Collector</TableHead>
-                <TableHead>Sack</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Total Discount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.date)}</TableCell>
-                  <TableCell className="font-mono text-xs font-semibold">{item.batchId}</TableCell>
-                  <TableCell>{item.farmerName}</TableCell>
-                  <TableCell>{item.collectorName ?? item.supplierName}</TableCell>
-                  <TableCell className="max-w-xs">{item.sackLabel}</TableCell>
-                  <TableCell className="font-medium">{item.quantity.toLocaleString()} pcs</TableCell>
-                  <TableCell>{formatCurrency(item.totalDiscountRm)}</TableCell>
+          <div className="overflow-x-auto w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16">No.</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Batch ID</TableHead>
+                  <TableHead>Farmer</TableHead>
+                  <TableHead>Collector</TableHead>
+                  <TableHead className="min-w-[240px] max-w-xs whitespace-normal">Sack</TableHead>
+                  <TableHead className="whitespace-nowrap">Quantity / Mass</TableHead>
+                  <TableHead>Total Discount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item, index) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-muted-foreground font-medium">
+                      {(pagination.page - 1) * pagination.pageSize + index + 1}
+                    </TableCell>
+                    <TableCell>{formatDate(item.date)}</TableCell>
+                    <TableCell className="font-mono text-xs font-semibold">{item.batchId}</TableCell>
+                    <TableCell>{item.farmerName}</TableCell>
+                    <TableCell>{item.collectorName ?? item.supplierName}</TableCell>
+                    <TableCell className="max-w-xs whitespace-normal break-words">{item.sackLabel}</TableCell>
+                    <TableCell className="font-medium font-mono text-xs whitespace-nowrap">
+                      {item.massFormatted ?? `${item.quantity.toLocaleString()} pcs`}
+                    </TableCell>
+                    <TableCell>{formatCurrency(item.totalDiscountRm)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-4">
                       <EditRecordButton
@@ -221,11 +228,12 @@ export function SackReturnsManager({
               ))}
             </TableBody>
           </Table>
-        </DataTable>
+        </div>
+      </DataTable>
       )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Sack Return" : "Add Sack Return"}</DialogTitle>
           </DialogHeader>
@@ -252,25 +260,27 @@ export function SackReturnsManager({
                 required
               />
             </div>
-            <FormSelect
+            <FormCombobox
               id="farmerId"
               name="farmerId"
               label="Farmer"
               value={farmerId}
               onValueChange={setFarmerId}
               placeholder="Select farmer"
+              searchPlaceholder="Search farmer by name..."
               options={farmerOptions}
             />
-            <FormSelect
+            <FormCombobox
               id="collectorId"
               name="collectorId"
               label="Collector"
               value={collectorId}
               onValueChange={setCollectorId}
               placeholder="Select collector"
+              searchPlaceholder="Search collector by name..."
               options={collectorOptions}
             />
-            <FormSelect
+            <FormCombobox
               id="sackId"
               name="sackId"
               label="Sack Catalog Item"
@@ -280,6 +290,7 @@ export function SackReturnsManager({
                 setDiscountTouched(false);
               }}
               placeholder="Select catalog item"
+              searchPlaceholder="Search sack catalog item..."
               options={sackOptions}
             />
             <div className="space-y-2">

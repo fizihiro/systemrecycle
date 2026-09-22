@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  Warehouse,
 } from "lucide-react";
 
 import {
@@ -40,6 +41,7 @@ const overviewItems = [
 const masterItems = [
   { title: "Farmers", href: "/dashboard/farmers", icon: Users },
   { title: "Suppliers", href: "/dashboard/suppliers", icon: Truck },
+  { title: "Collectors", href: "/dashboard/collectors", icon: Warehouse },
   { title: "Recyclers", href: "/dashboard/recyclers", icon: Recycle },
   {
     title: "Manufacturers",
@@ -137,6 +139,7 @@ export function AppSidebar() {
     }
     if (role === "recycler") {
       return (
+        item.href === "/dashboard/collectors" ||
         item.href === "/dashboard/recyclers" ||
         item.href === "/dashboard/sack-catalog"
       );

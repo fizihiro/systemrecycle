@@ -17,6 +17,7 @@ import {
   resolvePage,
   type PaginatedResult,
 } from "@/lib/pagination";
+import { formatPiecesMass } from "@/lib/format";
 import { collectorDeliverySchema } from "@/lib/validations";
 
 const PATH = "/dashboard/recycler-delivery";
@@ -35,14 +36,26 @@ function serialize(item: {
   createdAt: Date;
   updatedAt: Date;
 }) {
+  const inputWeightKg = Number(item.inputWeightKg);
+  const inputWeightTonnes = Math.round((inputWeightKg / 1000) * 1000) / 1000;
+  const inputMassFormatted = formatPiecesMass(item.sackQty, inputWeightKg, inputWeightTonnes);
+
+  const outputWeightKg = Number(item.outputWeightKg);
+  const outputWeightTonnes = Math.round((outputWeightKg / 1000) * 1000) / 1000;
+  const outputMassFormatted = `${Number.isInteger(outputWeightKg) ? outputWeightKg.toLocaleString() : outputWeightKg.toFixed(2)} kg | ${outputWeightTonnes.toFixed(3)} t`;
+
   return {
     id: item.id,
     date: item.date.toISOString(),
     supplierId: item.supplierId,
     collectorId: item.collectorId,
     sackQty: item.sackQty,
-    inputWeightKg: Number(item.inputWeightKg),
-    outputWeightKg: Number(item.outputWeightKg),
+    inputWeightKg,
+    inputWeightTonnes,
+    inputMassFormatted,
+    outputWeightKg,
+    outputWeightTonnes,
+    outputMassFormatted,
     supplierName: item.supplier.companyName,
     collectorName: item.collector.companyName,
     createdAt: item.createdAt.toISOString(),
@@ -60,7 +73,7 @@ export async function getCollectorDeliveries(
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.collectorDelivery.findMany({
     where: { programId },
-    orderBy: [{ date: "desc" }, { id: "desc" }],
+    orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
     include: {

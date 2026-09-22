@@ -7,7 +7,7 @@ import {
   SACK_ESTIMATED_WEIGHT_KG,
 } from "@/lib/dashboard/constants";
 import { prisma } from "@/lib/db";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber, formatPiecesMass } from "@/lib/format";
 import { getCurrentProgramId } from "@/lib/tenant";
 
 function monthLabel(key: string) {
@@ -385,18 +385,23 @@ export async function getDashboardAnalytics() {
       distributedWeightKg,
       distributedWeightTonnes,
       distributedWeightFormatted: `${formatNumber(distributedWeightKg)} kg`,
+      distributedMassFormatted: formatPiecesMass(sacksDistributed, distributedWeightKg, distributedWeightTonnes),
       collectedWeightKg,
       collectedWeightTonnes,
       collectedWeightFormatted: `${formatNumber(collectedWeightKg)} kg`,
+      collectedMassFormatted: formatPiecesMass(sacksCollected, collectedWeightKg, collectedWeightTonnes),
       totalInputWeightKg,
       totalInputWeightTonnes,
       totalInputWeightFormatted: `${formatNumber(totalInputWeightKg)} kg`,
+      inputMassFormatted: formatPiecesMass(sacksToCollector, totalInputWeightKg, totalInputWeightTonnes),
       totalOutputWeightKg,
       totalOutputWeightTonnes,
       totalOutputWeightFormatted: `${formatNumber(totalOutputWeightKg)} kg`,
+      outputMassFormatted: `${formatNumber(totalOutputWeightKg)} kg | ${formatNumber(totalOutputWeightTonnes, 3)} t`,
       recoveryYieldPct,
       returnGapPieces,
       returnGapPct,
+      returnGapMassFormatted: formatPiecesMass(returnGapPieces, returnGapPieces * SACK_ESTIMATED_WEIGHT_KG, (returnGapPieces * SACK_ESTIMATED_WEIGHT_KG) / 1000),
       totalDiscountRm,
       totalDiscountRmFormatted: formatCurrency(totalDiscountRm),
       totalPotentialDiscountRm,

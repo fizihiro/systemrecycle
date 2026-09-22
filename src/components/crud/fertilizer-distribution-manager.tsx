@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FormSelect } from "@/components/crud/form-select";
+import { FormCombobox } from "@/components/crud/form-combobox";
 import {
   DeleteRecordButton,
   EditRecordButton,
@@ -159,22 +159,28 @@ export function FertilizerDistributionManager({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">No.</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Farmer</TableHead>
                 <TableHead>Sack</TableHead>
-                <TableHead>Quantity</TableHead>
+                <TableHead className="whitespace-nowrap">Quantity / Mass</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <TableRow key={item.id}>
+                  <TableCell className="text-muted-foreground font-medium">
+                    {(pagination.page - 1) * pagination.pageSize + index + 1}
+                  </TableCell>
                   <TableCell>{formatDate(item.date)}</TableCell>
                   <TableCell>{item.supplierName}</TableCell>
                   <TableCell>{item.farmerName}</TableCell>
-                  <TableCell className="max-w-xs">{item.sackLabel}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell className="max-w-xs whitespace-normal break-words">{item.sackLabel}</TableCell>
+                  <TableCell className="font-medium font-mono text-xs whitespace-nowrap">
+                    {item.massFormatted ?? `${item.quantity.toLocaleString()} pcs`}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-4">
                       <EditRecordButton
@@ -195,7 +201,7 @@ export function FertilizerDistributionManager({
       )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit Distribution" : "Add Distribution"}
@@ -212,31 +218,34 @@ export function FertilizerDistributionManager({
                 required
               />
             </div>
-            <FormSelect
+            <FormCombobox
               id="supplierId"
               name="supplierId"
               label="Supplier"
               value={supplierId}
               onValueChange={setSupplierId}
               placeholder="Select supplier"
+              searchPlaceholder="Search supplier by name..."
               options={supplierOptions}
             />
-            <FormSelect
+            <FormCombobox
               id="farmerId"
               name="farmerId"
               label="Farmer"
               value={farmerId}
               onValueChange={setFarmerId}
               placeholder="Select farmer"
+              searchPlaceholder="Search farmer by name..."
               options={farmerOptions}
             />
-            <FormSelect
+            <FormCombobox
               id="sackId"
               name="sackId"
               label="Sack Catalog Item"
               value={sackId}
               onValueChange={setSackId}
               placeholder="Select catalog item"
+              searchPlaceholder="Search sack catalog item..."
               options={sackOptions}
             />
             <div className="space-y-2">

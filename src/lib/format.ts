@@ -27,3 +27,13 @@ export function toInputDate(value?: Date | string | null) {
 export function parseDecimal(value: unknown) {
   return Number(value);
 }
+
+export function formatPiecesMass(pieces: number, kg: number, tonnes?: number): string {
+  const t = tonnes !== undefined ? tonnes : kg / 1000;
+  const formattedPieces = Number(pieces).toLocaleString();
+  const formattedKg = Number.isInteger(kg)
+    ? Number(kg).toLocaleString()
+    : new Intl.NumberFormat("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(kg);
+  const formattedTonnes = new Intl.NumberFormat("en-MY", { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(t);
+  return `${formattedPieces} pcs | ${formattedKg} kg | ${formattedTonnes} t`;
+}

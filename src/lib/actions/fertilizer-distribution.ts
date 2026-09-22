@@ -19,6 +19,7 @@ import {
 } from "@/lib/pagination";
 import { fertilizerDistributionSchema } from "@/lib/validations";
 import { formatSackLabel } from "@/lib/sack-catalog";
+import { formatPiecesMass } from "@/lib/format";
 
 const PATH = "/dashboard/fertilizer-distribution";
 
@@ -42,6 +43,11 @@ function serialize(item: {
   createdAt: Date;
   updatedAt: Date;
 }) {
+  const emptySackWeightG = item.sack.emptySackWeightG ? Number(item.sack.emptySackWeightG) : 80;
+  const weightKg = Math.round(((item.quantity * emptySackWeightG) / 1000) * 100) / 100;
+  const weightTonnes = Math.round((weightKg / 1000) * 1000) / 1000;
+  const massFormatted = formatPiecesMass(item.quantity, weightKg, weightTonnes);
+
   return {
     id: item.id,
     date: item.date.toISOString(),
@@ -49,6 +55,9 @@ function serialize(item: {
     farmerId: item.farmerId,
     sackId: item.sackId,
     quantity: item.quantity,
+    weightKg,
+    weightTonnes,
+    massFormatted,
     supplierName: item.supplier.companyName,
     farmerName: item.farmer.name,
     sackLabel: formatSackLabel(item.sack),
@@ -67,7 +76,7 @@ export async function getFertilizerDistributions(
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.fertilizerDistribution.findMany({
     where: { programId },
-    orderBy: [{ date: "desc" }, { id: "desc" }],
+    orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
     include: {

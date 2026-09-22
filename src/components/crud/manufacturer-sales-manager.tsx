@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FormSelect } from "@/components/crud/form-select";
+import { FormCombobox } from "@/components/crud/form-combobox";
 import {
   DeleteRecordButton,
   EditRecordButton,
@@ -140,6 +140,7 @@ export function ManufacturerSalesManager({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">No.</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Recycler</TableHead>
                 <TableHead>Manufacturer</TableHead>
@@ -149,8 +150,11 @@ export function ManufacturerSalesManager({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <TableRow key={item.id}>
+                  <TableCell className="text-muted-foreground font-medium">
+                    {(pagination.page - 1) * pagination.pageSize + index + 1}
+                  </TableCell>
                   <TableCell>{formatDate(item.date)}</TableCell>
                   <TableCell>{item.recyclerName}</TableCell>
                   <TableCell className="font-medium">{item.manufacturerName}</TableCell>
@@ -176,7 +180,7 @@ export function ManufacturerSalesManager({
       )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Sale" : "Add Sale"}</DialogTitle>
           </DialogHeader>
@@ -191,25 +195,27 @@ export function ManufacturerSalesManager({
                 required
               />
             </div>
-            <FormSelect
+            <FormCombobox
               id="recyclerId"
               name="recyclerId"
               label="Recycler"
               value={recyclerId}
               onValueChange={setRecyclerId}
               placeholder="Select recycler"
+              searchPlaceholder="Search recycler by name..."
               options={recyclers.map((item) => ({
                 value: String(item.id),
                 label: item.label,
               }))}
             />
-            <FormSelect
+            <FormCombobox
               id="manufacturerId"
               name="manufacturerId"
               label="Manufacturer"
               value={manufacturerId}
               onValueChange={setManufacturerId}
               placeholder="Select manufacturer"
+              searchPlaceholder="Search manufacturer by name..."
               options={manufacturers.map((item) => ({
                 value: String(item.id),
                 label: item.label,

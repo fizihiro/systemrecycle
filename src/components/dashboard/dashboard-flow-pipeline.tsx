@@ -66,8 +66,8 @@ const pipelineSteps = [
     dualUnits: true,
     getMetrics: (data: DashboardAnalytics["kpis"]) => ({
       pcs: data.sacksToCollector,
-      kg: data.sacksToCollector * 0.1,
-      detail: `${(data.sacksToCollector * 0.1 * (data.recoveryYieldPct / 100)).toFixed(2)} kg output · ${data.recoveryYieldPct}% yield`,
+      kg: data.totalInputWeightKg || data.sacksToCollector * 0.1,
+      detail: `${data.totalOutputWeightFormatted} (${data.totalOutputWeightTonnes.toFixed(3)} t) output · ${data.recoveryYieldPct}% yield`,
     }),
   },
 ] as const;
@@ -107,6 +107,7 @@ function MetricDisplay({
   dualUnits: boolean;
   lightText: boolean;
 }) {
+  const tonnes = kg / 1000;
   if (dualUnits && pcs !== null) {
     return (
       <div className="space-y-1">
@@ -128,12 +129,11 @@ function MetricDisplay({
         </p>
         <p
           className={cn(
-            "text-sm font-medium tabular-nums",
-            lightText ? "text-slate-100/90" : "text-foreground",
+            "text-xs font-mono font-medium tabular-nums whitespace-nowrap tracking-tight",
+            lightText ? "text-slate-100/90" : "text-muted-foreground",
           )}
         >
-          {kg.toLocaleString("en-MY")} kg
-          <span className="ml-1 text-xs font-normal opacity-80">(est.)</span>
+          {Number.isInteger(kg) ? kg.toLocaleString("en-MY") : kg.toFixed(2)} kg | {tonnes.toFixed(3)} t
         </p>
       </div>
     );
@@ -146,14 +146,14 @@ function MetricDisplay({
         lightText ? "text-white" : "text-foreground",
       )}
     >
-      {kg.toLocaleString("en-MY")}
+      {Number.isInteger(kg) ? kg.toLocaleString("en-MY") : kg.toFixed(2)}
       <span
         className={cn(
           "ml-1.5 text-sm font-semibold",
           lightText ? "text-slate-100" : "text-foreground/75",
         )}
       >
-        kg
+        kg | {tonnes.toFixed(3)} t
       </span>
     </p>
   );

@@ -44,8 +44,8 @@ import type { PaginationMeta } from "@/lib/pagination";
 export function CollectorsManager({
   items,
   pagination,
-  title = "Recyclers",
-  description = "Manage recyclers processing collected sacks into recycled PP (polypropylene) pellets.",
+  title = "Collectors",
+  description = "Manage registered sack collection centers and drop-off points (record-keeping only, no login capabilities).",
 }: {
   items: CollectorRecord[];
   pagination: PaginationMeta;
@@ -112,7 +112,7 @@ export function CollectorsManager({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead className="w-16">No.</TableHead>
                 <TableHead>Company Name</TableHead>
                 <TableHead>Process Capacity (KG)</TableHead>
                 <TableHead>Phone</TableHead>
@@ -120,9 +120,11 @@ export function CollectorsManager({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.id}</TableCell>
+                  <TableCell className="text-muted-foreground font-medium">
+                    {(pagination.page - 1) * pagination.pageSize + index + 1}
+                  </TableCell>
                   <TableCell className="font-medium">{item.companyName}</TableCell>
                   <TableCell>{formatNumber(item.processCapacityKg)} kg</TableCell>
                   <TableCell>{item.phone}</TableCell>

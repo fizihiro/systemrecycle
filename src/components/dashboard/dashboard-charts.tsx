@@ -209,10 +209,13 @@ export function DashboardCharts({ data }: { data: DashboardAnalytics }) {
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      formatter={(value) => [
-                        `${Number(value).toLocaleString()} kg`,
-                        "Weight",
-                      ]}
+                      formatter={(value) => {
+                        const num = Number(value);
+                        return [
+                          `${num.toLocaleString()} kg | ${(num / 1000).toFixed(3)} t`,
+                          "Weight",
+                        ];
+                      }}
                     />
                   }
                 />

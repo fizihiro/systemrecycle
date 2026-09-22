@@ -160,7 +160,7 @@ export function SackCatalogManager({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead className="w-16">No.</TableHead>
                 <TableHead>Product Category</TableHead>
                 <TableHead>Material Type</TableHead>
                 <TableHead>Size (kg)</TableHead>
@@ -169,9 +169,11 @@ export function SackCatalogManager({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.id}</TableCell>
+                  <TableCell className="text-muted-foreground font-medium">
+                    {(pagination.page - 1) * pagination.pageSize + index + 1}
+                  </TableCell>
                   <TableCell>{item.productCategory}</TableCell>
                   <TableCell className="max-w-xs">{item.materialType}</TableCell>
                   <TableCell>{item.sizeKg}</TableCell>
@@ -196,7 +198,7 @@ export function SackCatalogManager({
       )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit Catalog Item" : "Add Catalog Item"}

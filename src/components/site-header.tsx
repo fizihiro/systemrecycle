@@ -23,10 +23,14 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/farmers": "Farmers",
   "/dashboard/suppliers": "Suppliers",
   "/dashboard/collectors": "Collectors",
+  "/dashboard/recyclers": "Recyclers",
+  "/dashboard/manufacturers": "Manufacturers",
   "/dashboard/sack-catalog": "Sack Catalog",
   "/dashboard/fertilizer-distribution": "Fertilizer Distribution",
   "/dashboard/sack-returns": "Sack Returns",
+  "/dashboard/recycler-delivery": "Recycler Delivery",
   "/dashboard/collector-delivery": "Collector Delivery",
+  "/dashboard/manufacturer-sales": "Manufacturer Sales",
 };
 
 export function SiteHeader() {

@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export function FormSelect({
   id,
@@ -28,12 +29,16 @@ export function FormSelect({
   options: { value: string; label: string }[];
   required?: boolean;
 }) {
+  const selectedOption = options.find((opt) => String(opt.value) === String(value));
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={(next) => onValueChange(next ?? "")}>
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue placeholder={placeholder} />
+        <SelectTrigger id={id} className="w-full min-w-0 overflow-hidden">
+          <span className={cn("truncate flex-1 min-w-0 text-left", !selectedOption && "text-muted-foreground")}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (

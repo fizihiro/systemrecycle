@@ -63,7 +63,7 @@ export async function getSackCatalogItems(
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.sackCatalog.findMany({
     where: { programId },
-    orderBy: [{ productCategory: "asc" }, { sizeKg: "asc" }, { id: "desc" }],
+    orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
   });

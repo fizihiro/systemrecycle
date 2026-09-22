@@ -19,6 +19,7 @@ import {
 } from "@/lib/pagination";
 import { computeDiscount } from "@/lib/discount";
 import { formatSackLabel } from "@/lib/sack-catalog";
+import { formatPiecesMass } from "@/lib/format";
 import { sackReturnSchema } from "@/lib/validations";
 
 const PATH = "/dashboard/sack-returns";
@@ -47,6 +48,11 @@ function serialize(item: {
   createdAt: Date;
   updatedAt: Date;
 }) {
+  const emptySackWeightG = item.sack.emptySackWeightG ? Number(item.sack.emptySackWeightG) : 80;
+  const weightKg = Math.round(((item.quantity * emptySackWeightG) / 1000) * 100) / 100;
+  const weightTonnes = Math.round((weightKg / 1000) * 1000) / 1000;
+  const massFormatted = formatPiecesMass(item.quantity, weightKg, weightTonnes);
+
   return {
     id: item.id,
     batchId: item.batchId ?? `BATCH-${String(item.id).padStart(4, "0")}`,
@@ -56,6 +62,9 @@ function serialize(item: {
     collectorId: item.collectorId ?? item.supplierId,
     sackId: item.sackId,
     quantity: item.quantity,
+    weightKg,
+    weightTonnes,
+    massFormatted,
     totalDiscountRm: Number(item.totalDiscountRm),
     farmerName: item.farmer.name,
     collectorName: item.collector?.companyName ?? item.supplier.companyName,
@@ -76,7 +85,7 @@ export async function getSackReturns(
   const pagination = buildPaginationMeta(total, resolvePage(page));
   const items = await prisma.sackReturn.findMany({
     where: { programId },
-    orderBy: [{ date: "desc" }, { id: "desc" }],
+    orderBy: { id: "desc" },
     skip: getSkip(pagination.page),
     take: PAGE_SIZE,
     include: {
