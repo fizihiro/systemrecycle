@@ -54,6 +54,7 @@ export async function getDashboardAnalytics() {
     distributionAgg,
     returnAgg,
     deliveryAgg,
+    manufacturerSalesAgg,
     discountAggregate,
     monthlyDistribution,
     monthlyReturns,
@@ -80,6 +81,10 @@ export async function getDashboardAnalytics() {
     prisma.collectorDelivery.aggregate({
       where: { programId },
       _sum: { sackQty: true, inputWeightKg: true, outputWeightKg: true },
+    }),
+    prisma.manufacturerSales.aggregate({
+      where: { programId },
+      _sum: { purchaseWeightKg: true, salesPriceRm: true },
     }),
     prisma.sackReturn.aggregate({
       where: { programId },
@@ -225,6 +230,14 @@ export async function getDashboardAnalytics() {
   const totalDiscountRm = Number(discountAggregate._sum.totalDiscountRm ?? 0);
   const totalInputWeightKg = Number(deliveryAgg._sum.inputWeightKg ?? 0);
   const totalOutputWeightKg = Number(deliveryAgg._sum.outputWeightKg ?? 0);
+  const totalManufacturerPurchasedKg = Number(manufacturerSalesAgg._sum.purchaseWeightKg ?? 0);
+  const totalManufacturerSalesRm = Number(manufacturerSalesAgg._sum.salesPriceRm ?? 0);
+  const totalManufacturerPurchasedTonnes = kgToTonnes(totalManufacturerPurchasedKg);
+
+  // Stage 4: Confirmed Downstream Manufacturer use
+  const downstreamWeightKg = totalManufacturerPurchasedKg > 0 ? totalManufacturerPurchasedKg : totalOutputWeightKg;
+  const downstreamWeightTonnes = kgToTonnes(downstreamWeightKg);
+  const downstreamSacks = Math.round(downstreamWeightKg / (SACK_ESTIMATED_WEIGHT_KG > 0 ? SACK_ESTIMATED_WEIGHT_KG : 0.1));
 
   // Dynamic mass calculated from Sack SKU empty_sack_weight_g
   const distributedWeightKg = Number(distributedMassRaw[0]?.totalKg ?? 0);
@@ -366,6 +379,13 @@ export async function getDashboardAnalytics() {
         outputKg: totalOutputWeightKg,
         outputTonnes: totalOutputWeightTonnes,
       },
+      {
+        key: "manufacturer",
+        label: "Downstream Manufacturer",
+        pcs: downstreamSacks,
+        kg: downstreamWeightKg,
+        tonnes: downstreamWeightTonnes,
+      },
     ],
     recoveryYieldPct,
     returnGapPct,
@@ -398,6 +418,16 @@ export async function getDashboardAnalytics() {
       totalOutputWeightTonnes,
       totalOutputWeightFormatted: `${formatNumber(totalOutputWeightKg)} kg`,
       outputMassFormatted: `${formatNumber(totalOutputWeightKg)} kg | ${formatNumber(totalOutputWeightTonnes, 3)} t`,
+      totalManufacturerPurchasedKg,
+      totalManufacturerPurchasedTonnes,
+      totalManufacturerPurchasedFormatted: `${formatNumber(totalManufacturerPurchasedKg)} kg`,
+      totalManufacturerSalesRm,
+      totalManufacturerSalesRmFormatted: formatCurrency(totalManufacturerSalesRm),
+      downstreamWeightKg,
+      downstreamWeightTonnes,
+      downstreamWeightFormatted: `${formatNumber(downstreamWeightKg)} kg`,
+      downstreamSacks,
+      downstreamMassFormatted: formatPiecesMass(downstreamSacks, downstreamWeightKg, downstreamWeightTonnes),
       recoveryYieldPct,
       returnGapPieces,
       returnGapPct,

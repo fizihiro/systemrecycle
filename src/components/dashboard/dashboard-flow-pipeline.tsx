@@ -1,8 +1,12 @@
+import { Fragment } from "react";
 import {
+  ArrowDown,
   ArrowRight,
+  Factory,
   Package,
   Recycle,
   RotateCcw,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -15,7 +19,26 @@ import {
 import { cn } from "@/lib/utils";
 import type { DashboardAnalytics } from "@/lib/actions/dashboard";
 
-const pipelineSteps = [
+type PipelineStep = {
+  key: string;
+  stage: number;
+  label: string;
+  sublabel: string;
+  icon: LucideIcon;
+  flowColor: string;
+  iconColor: string;
+  connectorFrom: string;
+  connectorTo: string;
+  lightText: boolean;
+  dualUnits: boolean;
+  getMetrics: (data: DashboardAnalytics["kpis"]) => {
+    pcs: number | null;
+    kg: number;
+    detail?: string;
+  };
+};
+
+const pipelineSteps: PipelineStep[] = [
   {
     key: "distribution",
     stage: 1,
@@ -31,7 +54,7 @@ const pipelineSteps = [
     getMetrics: (data: DashboardAnalytics["kpis"]) => ({
       pcs: data.sacksDistributed,
       kg: data.distributedWeightKg,
-      detail: undefined as string | undefined,
+      detail: undefined,
     }),
   },
   {
@@ -53,15 +76,15 @@ const pipelineSteps = [
     }),
   },
   {
-    key: "collector",
+    key: "recycler",
     stage: 3,
-    label: "Recycler & Manufacturer",
-    sublabel: "Recycling & reproduction",
+    label: "Recycler",
+    sublabel: "Accepted input & recycling output",
     icon: Recycle,
     flowColor: "bg-flow-3",
     iconColor: "text-white bg-white/20",
     connectorFrom: "from-flow-3",
-    connectorTo: "to-flow-3",
+    connectorTo: "to-flow-4",
     lightText: true,
     dualUnits: true,
     getMetrics: (data: DashboardAnalytics["kpis"]) => ({
@@ -70,7 +93,34 @@ const pipelineSteps = [
       detail: `${data.totalOutputWeightFormatted} (${data.totalOutputWeightTonnes.toFixed(3)} t) output · ${data.recoveryYieldPct}% yield`,
     }),
   },
-] as const;
+  {
+    key: "manufacturer",
+    stage: 4,
+    label: "Downstream Manufacturer",
+    sublabel: "Confirmed downstream use",
+    icon: Factory,
+    flowColor: "bg-flow-4",
+    iconColor: "text-white bg-white/20",
+    connectorFrom: "from-flow-4",
+    connectorTo: "to-flow-4",
+    lightText: true,
+    dualUnits: true,
+    getMetrics: (data: DashboardAnalytics["kpis"]) => {
+      const kg = data.downstreamWeightKg ?? data.totalManufacturerPurchasedKg ?? data.totalOutputWeightKg;
+      const pcs = data.downstreamSacks ?? Math.round(kg / 0.1);
+      const mfgCount = data.manufacturers;
+      const valueFormatted = data.totalManufacturerSalesRmFormatted
+        ?? (data.rppEconomicValueFormatted ? `${data.rppEconomicValueFormatted} value` : "");
+      return {
+        pcs,
+        kg,
+        detail: valueFormatted
+          ? `${valueFormatted} · ${mfgCount} manufacturer${mfgCount === 1 ? "" : "s"}`
+          : `${mfgCount} partner manufacturer${mfgCount === 1 ? "" : "s"}`,
+      };
+    },
+  },
+];
 
 function PipelineConnector({
   from,
@@ -80,18 +130,40 @@ function PipelineConnector({
   to: string;
 }) {
   return (
-    <div className="hidden flex-1 items-center px-2 lg:flex">
-      <div
-        className={cn(
-          "h-1 w-full rounded-full bg-gradient-to-r",
-          from,
-          to,
-        )}
-      />
-      <ArrowRight
-        className="text-muted-foreground mx-1.5 size-4 shrink-0"
-        strokeWidth={2.25}
-      />
+    <div
+      className="hidden shrink-0 items-center justify-center self-center px-0.5 lg:flex lg:w-5 xl:w-7"
+      aria-hidden
+    >
+      <div className="relative flex w-full items-center">
+        <div
+          className={cn(
+            "h-1 w-full rounded-full bg-gradient-to-r",
+            from,
+            to,
+          )}
+        />
+        <ArrowRight
+          className="text-muted-foreground/70 -ml-1 size-3.5 shrink-0 xl:size-4"
+          strokeWidth={2.5}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MobilePipelineConnector({
+  from,
+  to,
+}: {
+  from: string;
+  to: string;
+}) {
+  return (
+    <div className="flex items-center justify-center py-1 lg:hidden" aria-hidden>
+      <div className="flex flex-col items-center">
+        <div className={cn("h-3 w-0.5 rounded-full bg-gradient-to-b", from, to)} />
+        <ArrowDown className="text-muted-foreground/70 -mt-0.5 size-3.5" strokeWidth={2.5} />
+      </div>
     </div>
   );
 }
@@ -110,17 +182,17 @@ function MetricDisplay({
   const tonnes = kg / 1000;
   if (dualUnits && pcs !== null) {
     return (
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         <p
           className={cn(
-            "font-heading text-2xl font-bold tracking-tight tabular-nums",
+            "font-heading text-xl xl:text-2xl font-bold tracking-tight tabular-nums",
             lightText ? "text-white" : "text-foreground",
           )}
         >
           {pcs.toLocaleString()}
           <span
             className={cn(
-              "ml-1.5 text-sm font-semibold",
+              "ml-1.5 text-xs xl:text-sm font-semibold",
               lightText ? "text-slate-100" : "text-foreground/75",
             )}
           >
@@ -129,7 +201,7 @@ function MetricDisplay({
         </p>
         <p
           className={cn(
-            "text-xs font-mono font-medium tabular-nums whitespace-nowrap tracking-tight",
+            "text-xs font-mono font-medium tabular-nums tracking-tight",
             lightText ? "text-slate-100/90" : "text-muted-foreground",
           )}
         >
@@ -142,14 +214,14 @@ function MetricDisplay({
   return (
     <p
       className={cn(
-        "font-heading text-2xl font-bold tracking-tight tabular-nums",
+        "font-heading text-xl xl:text-2xl font-bold tracking-tight tabular-nums",
         lightText ? "text-white" : "text-foreground",
       )}
     >
       {Number.isInteger(kg) ? kg.toLocaleString("en-MY") : kg.toFixed(2)}
       <span
         className={cn(
-          "ml-1.5 text-sm font-semibold",
+          "ml-1.5 text-xs xl:text-sm font-semibold",
           lightText ? "text-slate-100" : "text-foreground/75",
         )}
       >
@@ -171,8 +243,8 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
               Sack2Loop Flow Pipeline
             </CardTitle>
             <CardDescription className="mt-1 max-w-xl leading-relaxed">
-              Linear view of sack movement from distribution through returns collection
-              and collector processing/reproduction.
+              Linear view of sack movement from distribution through returns collection,
+              recycler processing, and confirmed downstream manufacturer use.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -187,30 +259,30 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-1.5 xl:gap-2.5">
           {pipelineSteps.map((step, index) => {
             const Icon = step.icon;
             const { pcs, kg, detail } = step.getMetrics(data.kpis);
             const isLast = index === pipelineSteps.length - 1;
 
             return (
-              <div key={step.key} className="flex flex-1 flex-col lg:flex-row">
+              <Fragment key={step.key}>
                 <div
                   className={cn(
-                    "relative flex flex-1 flex-col rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md",
+                    "relative flex flex-1 min-w-0 flex-col rounded-xl border p-4 xl:p-5 shadow-sm transition-shadow hover:shadow-md",
                     step.flowColor,
                     step.lightText ? "border-white/20" : "border-white/40",
                   )}
                 >
-                  <div className="mb-4 flex items-start justify-between gap-2">
+                  <div className="mb-3.5 flex items-start justify-between gap-2">
                     <div
                       className={cn(
-                        "flex size-10 items-center justify-center rounded-xl shadow-sm",
+                        "flex size-9 xl:size-10 items-center justify-center rounded-xl shadow-sm",
                         step.iconColor,
                       )}
                     >
-                      <Icon className="size-5" strokeWidth={2.25} />
+                      <Icon className="size-4 xl:size-5" strokeWidth={2.25} />
                     </div>
                     <span
                       className={cn(
@@ -233,7 +305,7 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
 
                   <p
                     className={cn(
-                      "mt-3 text-sm font-semibold",
+                      "mt-3 text-sm font-semibold tracking-tight",
                       step.lightText ? "text-white" : "text-foreground/90",
                     )}
                   >
@@ -250,7 +322,7 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
                   {detail ? (
                     <p
                       className={cn(
-                        "mt-2.5 text-xs font-medium",
+                        "mt-2.5 text-xs font-medium leading-relaxed",
                         step.lightText ? "text-slate-100" : "text-foreground font-semibold",
                       )}
                     >
@@ -258,13 +330,20 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
                     </p>
                   ) : null}
                 </div>
+
                 {!isLast ? (
-                  <PipelineConnector
-                    from={step.connectorFrom}
-                    to={step.connectorTo}
-                  />
+                  <>
+                    <PipelineConnector
+                      from={step.connectorFrom}
+                      to={step.connectorTo}
+                    />
+                    <MobilePipelineConnector
+                      from={step.connectorFrom}
+                      to={step.connectorTo}
+                    />
+                  </>
                 ) : null}
-              </div>
+              </Fragment>
             );
           })}
         </div>
@@ -272,15 +351,19 @@ export function DashboardFlowPipeline({ data }: { data: DashboardAnalytics }) {
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 border-t pt-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-2">
             <span className="bg-flow-1 size-2.5 rounded-full" />
-            Distribution
+            Stage 1: Distribution
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-flow-2 size-2.5 rounded-full" />
-            Collection
+            Stage 2: Collection
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-flow-3 size-2.5 rounded-full" />
-            Recycling &amp; Manufacturing
+            Stage 3: Recycler
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="bg-flow-4 size-2.5 rounded-full" />
+            Stage 4: Downstream Manufacturer
           </span>
           <span className="flex items-center gap-2">
             <span className="bg-gold size-2.5 rounded-full" />

@@ -24,6 +24,10 @@ export default async function DashboardPage() {
               Sack2Loop Dashboard
             </h1>
             <p className="text-sidebar-foreground/85 max-w-xl text-sm leading-relaxed sm:text-base">
+              <span className="font-medium text-sidebar-foreground">
+                Extended Producer Responsibility (EPR)
+              </span>
+              <br />
               Track circular flow across the closed-loop chain, compare actual
               vs potential farmer discounts, and monitor weight-normalised recovery
               from distribution through collector processing.
